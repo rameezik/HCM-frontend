@@ -51,6 +51,7 @@ export function Form({
   submitLabel = "Save",
   successMessage = "Saved successfully.",
   onCancel,
+  disabled = false,
 }) {
   const formId = useId();
   const [busy, setBusy] = useState(false),
@@ -58,6 +59,7 @@ export function Form({
     [success, setSuccess] = useState("");
   async function submit(event) {
     event.preventDefault();
+    if (disabled || busy) return;
     setBusy(true);
     setError("");
     setSuccess("");
@@ -141,7 +143,7 @@ export function Form({
       </div>
       <Message error={error} success={success} />
       <div className="flex gap-3">
-        <Button type="submit" disabled={busy}>
+        <Button type="submit" disabled={busy || disabled}>
           {busy ? "Saving…" : submitLabel}
         </Button>
         {onCancel && (
@@ -177,7 +179,7 @@ export function Table({ rows, columns, empty = "No records yet." }) {
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={r._id || r.date || i}>
+            <tr key={r._id || (r.employee?._id && r.date ? `${r.employee._id}:${r.date}` : r.date || i)}>
               {columns.map((c) => (
                 <td key={c.key}>
                   {c.render ? c.render(r) : String(r[c.key] ?? "—")}

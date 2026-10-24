@@ -140,3 +140,5 @@ for (const role of ["admin", "hr", "employee"]) {
     { label: "AI assistant", href: `/${role}/assistant`, icon: "UserRound" },
   );
 }
+
+for (const role of ["employee", "hr"]) navigation[role].push({label:"Face enrollment",href:`/${role}/face-enrollment`,icon:"UserRound"});

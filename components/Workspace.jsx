@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import AttendanceAnalytics from "@/components/attendance/AttendanceAnalytics";
+import FaceVerification from "@/components/attendance/FaceVerification";
+import BiometricEnrollment from "@/components/attendance/BiometricEnrollment";
 import { api } from "@/lib/api";
 import {
   Panel,
@@ -65,6 +68,7 @@ function useAction(refresh) {
     try {
       await api(path, { method, ...(body === undefined ? {} : { body }) });
       refresh?.();
+      window.dispatchEvent(new Event("attendance-updated"));
       setSuccess("Saved successfully.");
     } catch (e) {
       setError(e.message);
@@ -127,6 +131,7 @@ export default function Workspace({ role, view = "dashboard" }) {
     employees: <Employees user={user} />,
     profile: <Profile user={user} />,
     attendance: <Attendance user={user} />,
+    "face-enrollment": <BiometricEnrollment user={user} />,
     leaves: <Leaves user={user} />,
     payroll: <Payroll user={user} />,
     payslips: <Payroll user={user} />,
@@ -148,7 +153,7 @@ export default function Workspace({ role, view = "dashboard" }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="mb-2 text-xs uppercase tracking-[.2em] text-[#4bb8dc]">
-              {role} workspace · UTC
+              {role} workspace
             </p>
             <h1 className="text-3xl font-semibold capitalize tracking-tight">
               {view.replaceAll("-", " ")}
@@ -204,6 +209,7 @@ function DateFilters({ onChange, initial = {} }) {
   );
 }
 function Dashboard({ user }) {
+  const ai = useResource("/ai/status");
   const [filters, setFilters] = useState({
     start: `${monthNow()}-01`,
     end: isoToday(),
@@ -218,6 +224,7 @@ function Dashboard({ user }) {
   const d = stats.data;
   return (
     <div className="space-y-6">
+      <AttendanceAnalytics user={user}/>
       <Panel title="Reporting period">
         <DateFilters initial={filters} onChange={setFilters} />
       </Panel>
@@ -403,7 +410,7 @@ function Dashboard({ user }) {
                   title="AI dashboard summary"
                   action={
                     <Button
-                      disabled={busy}
+                      disabled={busy || !ai.data?.configured}
                       onClick={async () => {
                         setBusy(true);
                         setError("");
@@ -424,6 +431,7 @@ function Dashboard({ user }) {
                     </Button>
                   }
                 >
+                  <AiAvailability resource={ai}/>
                   <Message error={error} />
                   {summary ? (
                     <>
@@ -531,8 +539,7 @@ function Settings({ user }) {
   return (
     <Panel title="Company policy">
       <p className="mb-5 text-sm text-zinc-400">
-        Calendar and timestamps use UTC. Attendance records retain their rule
-        snapshot. Weekend numbers: Sunday 0 through Saturday 6.
+        Attendance uses your company timezone and shift hours. Records retain their policy snapshot; stored timestamps remain UTC. Weekend numbers: Sunday 0 through Saturday 6.
       </p>
       <Resource resource={resource}>
         {resource.data &&
@@ -546,9 +553,13 @@ function Settings({ user }) {
                 { name: "name", label: "Company name" },
                 {
                   name: "officeStart",
-                  label: "Office start (UTC)",
+                  label: "Office start (company timezone)",
                   type: "time",
                 },
+                { name: "timezone", label: "Company timezone (IANA)", defaultValue: "UTC" },
+                { name: "officeEnd", label: "Office end (company timezone)", type: "time", defaultValue: "17:00" },
+                { name: "maxShiftHours", label: "Maximum shift duration (hours)", type: "number", min: 1, max: 24, defaultValue:20 },
+                { name: "biometricRetentionDays", label: "Biometric retention (days)", type: "number", min: 1, max:365, defaultValue:365 },
                 {
                   name: "graceMinutes",
                   label: "Grace period (minutes)",
@@ -597,7 +608,6 @@ function Settings({ user }) {
                   .split(",")
                   .filter(Boolean)
                   .map(Number);
-                body.timezone = "UTC";
                 await api("/company", { method: "PUT", body });
                 resource.refresh();
               }}
@@ -1021,6 +1031,8 @@ function Attendance({ user }) {
           <CheckButtons onChange={resource.refresh} />
         </Panel>
       )}
+      {user.role !== 'admin' && <Panel title="Verified face attendance"><FaceVerification user={user} onRecorded={resource.refresh}/></Panel>}
+      <AttendanceAnalytics user={user}/>
       <Panel title="Attendance filters">
         <DateFilters initial={filters} onChange={setFilters} />
       </Panel>
@@ -1120,6 +1132,7 @@ function Attendance({ user }) {
               setDecision(null);
               corrections.refresh();
               resource.refresh();
+              window.dispatchEvent(new Event("attendance-updated"));
             }}
           />
         </Panel>
@@ -1145,6 +1158,7 @@ function Decision({ onSubmit, onCancel, cancellation = false }) {
   );
 }
 function Leaves({ user }) {
+  const ai = useResource("/ai/status");
   const resource = useResource("/leave"),
     types = useResource("/leave-types"),
     balance = useResource(
@@ -1180,6 +1194,7 @@ function Leaves({ user }) {
             )}
           </Panel>
           <Panel title="Smart leave">
+            <AiAvailability resource={ai}/>
             <p className="mb-4 text-sm text-zinc-400">
               Describe your leave in plain words. Review the AI-generated dates
               before submitting the form.
@@ -1193,6 +1208,7 @@ function Leaves({ user }) {
                   wide: true,
                 },
               ]}
+              disabled={!ai.data?.configured}
               submitLabel="Prepare leave form"
               successMessage="AI draft prepared. Review and confirm below."
               onSubmit={async (body) => {
@@ -1668,9 +1684,11 @@ function Audit({ compact = false }) {
   );
 }
 function Assistant() {
+  const ai = useResource("/ai/status");
   const [history, setHistory] = useState([]);
   return (
     <Panel title="Ask your assistant">
+      <AiAvailability resource={ai}/>
       <p className="mb-5 text-sm text-zinc-400">
         Answers use your role and data scope. The assistant cannot save or
         approve records.
@@ -1696,6 +1714,7 @@ function Assistant() {
             maxLength: 4000,
           },
         ]}
+        disabled={!ai.data?.configured}
         submitLabel="Ask assistant"
         successMessage="Answer received."
         onSubmit={async (body) => {
@@ -1761,4 +1780,10 @@ function TrendChart({ rows }) {
       </figcaption>
     </figure>
   );
+}
+
+function AiAvailability({resource}) {
+  if(resource.loading)return <p className="mb-3 text-sm text-zinc-400" role="status">Checking optional AI availability…</p>;
+  if(resource.data?.configured)return null;
+  return <p className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-400" role="status">{resource.data?.message || 'AI availability could not be checked. Regular forms and reports remain available.'}</p>;
 }

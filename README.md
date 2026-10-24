@@ -18,7 +18,7 @@ Frontend → Express REST API → MongoDB. The frontend never accesses MongoDB d
 ## Start in this cloud environment
 
 ```sh
-bash /workspace/onboarding/start.sh
+MONGODB_URI='mongodb://127.0.0.1:27017/hcm_lite?replicaSet=hcm' bash /workspace/onboarding/start.sh
 ```
 
 This starts the local MongoDB replica set, the API from `/workspace/HCM-backend` on port4000, and Next.js from `/workspace/HCM-frontend` on port3000. Logs are in `/workspace/logs`. Installation/refresh is `bash /workspace/onboarding/install.sh`; it uses the application lockfiles and preserves local configuration. Both apps use Node24.19.0.
@@ -45,6 +45,10 @@ The actual backend code is in `/workspace/HCM-backend`, a separate Git repositor
 
 ## Requirements and verification
 
-See [requirements checklist](docs/requirements.md), [verification report](docs/verification.md), and the backend README. Calendar dates and office hours use UTC. Active frontend development and review use this `HCM-frontend` repository. The earlier `hcm-app` review commit is retained as-is; its history is not rewritten.
+See [requirements checklist](docs/requirements.md), [verification report](docs/verification.md), and the backend README. Attendance labels and business dates use the company IANA timezone (default UTC); stored timestamps remain UTC. Active frontend development and review use this `HCM-frontend` repository. The earlier `hcm-app` review commit is retained as-is; its history is not rewritten.
 
-The hosted AI adapter and scoped tools are implemented, but live model behavior requires a secure backend `AI_API_KEY` binding and provider network access. Ordinary forms remain usable without AI. Optional camera/mobile and other bonus features are not implemented. Local commits are created for review in the two selected repositories. No pushes, public deployment or LMS submission have been performed.
+The hosted AI adapter and scoped tools are implemented, but live model behavior requires a secure backend `AI_API_KEY` binding and provider network access. Ordinary forms remain usable without AI. The optional local-camera attendance flow is implemented; other bonus features and robust liveness/PAD are not claimed. No public deployment or LMS submission is part of this change.
+
+## Attendance extension
+
+See [attendance and optional-AI notes](docs/attendance-extension.md). AI-dependent controls are disabled when the backend reports a missing AI_API_KEY; all regular HR workflows remain enabled. Biometric enrollment and face attendance use the application backend’s local OpenCV YuNet/SFace ONNX inference. Install backend models with `bash scripts/setup-local-face.sh` and provision its local template-encryption key with `npm run setup:env`. No cloud biometric credentials are needed. The UI discloses that identity matching does not provide robust liveness or replay protection; ordinary attendance remains available.
