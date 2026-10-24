@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --surface: #111116;
+  --surface-hover: #1b1b23;
+  --border: #292934;
+  --foreground: #f8fafc;
+  --muted: #a1a1aa;
+  --blue: #007ba7;
+  --rose: #ff2d95;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-primary: var(--blue);
+  --color-secondary: var(--rose);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.gradient-text {
+  background: linear-gradient(100deg, #007ba7, #7487e9, #ff2d95);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.gradient-bg {
+  background: linear-gradient(100deg, #007ba7, #7487e9, #ff2d95);
+}
+
+.glass-card {
+  background: rgba(17, 17, 22, 0.88);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  backdrop-filter: blur(18px);
+}
+
+.neon-background {
+  background:
+    radial-gradient(
+      ellipse at 15% 20%,
+      rgba(0, 123, 167, 0.15),
+      transparent 40%
+    ),
+    radial-gradient(
+      ellipse at 85% 75%,
+      rgba(255, 45, 149, 0.11),
+      transparent 40%
+    ),
+    #0a0a0a;
+}
+
+.input-field {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid #30303a;
+  border-radius: 12px;
+  background: #15151c;
+  color: white;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-field:focus {
+  border-color: #007ba7;
+  box-shadow: 0 0 0 3px rgba(0, 123, 167, 0.15);
+}
+
+.input-field::placeholder {
+  color: #71717a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.gradient-text {
+  background: linear-gradient(
+    90deg,
+    #007ba7 0%,
+    #4d80e4 45%,
+    #ff2d95 100%
+  );
+
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
