@@ -1,5 +1,4 @@
-import PagePlaceholder from "@/components/layout/PagePlaceholder";
-
-export default function AdminPayrollPage() {
-  return <PagePlaceholder title="Payroll" description="Payroll administration will appear here." />;
+import Workspace from "@/components/Workspace";
+export default function Page() {
+  return <Workspace role="admin" view="payroll" />;
 }

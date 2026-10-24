@@ -71,7 +71,9 @@ body {
   background: #15151c;
   color: white;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .input-field:focus {
@@ -111,14 +113,83 @@ body {
 }
 
 .gradient-text {
-  background: linear-gradient(
-    90deg,
-    #007ba7 0%,
-    #4d80e4 45%,
-    #ff2d95 100%
-  );
+  background: linear-gradient(90deg, #007ba7 0%, #4d80e4 45%, #ff2d95 100%);
 
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+@keyframes hcm-appear {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.hcm-fade-in {
+  animation: hcm-appear 0.3s ease-out;
+}
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled),
+select {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #4bb8dc;
+  outline-offset: 4px;
+}
+.hcm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  text-align: left;
+}
+.hcm-table th {
+  color: #a1a1aa;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.hcm-table th,
+.hcm-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #292934;
+  vertical-align: top;
+}
+.hcm-table tbody tr:hover {
+  background: #ffffff03;
+}
+.hcm-table td {
+  max-width: 320px;
+  overflow-wrap: anywhere;
+}
+.hcm-tag {
+  padding: 4px 9px;
+  border: 1px solid #292934;
+  border-radius: 20px;
+  color: #82cde6;
+  font-size: 0.75rem;
+  display: inline-block;
+}
+
+:root {
+  color-scheme: dark;
+}
+/* Preserve dates, names and money on narrow screens; the enclosing table scrolls. */
+.hcm-table td {
+  white-space: nowrap;
+  overflow-wrap: normal;
 }

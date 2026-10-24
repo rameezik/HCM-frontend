@@ -1,5 +1,4 @@
-import PagePlaceholder from "@/components/layout/PagePlaceholder";
-
-export default function EmployeeLeavesPage() {
-  return <PagePlaceholder title="My leaves" description="Your leave information will appear here." />;
+import Workspace from "@/components/Workspace";
+export default function Page() {
+  return <Workspace role="employee" view="leaves" />;
 }

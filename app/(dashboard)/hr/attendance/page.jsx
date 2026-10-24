@@ -1,5 +1,4 @@
-import PagePlaceholder from "@/components/layout/PagePlaceholder";
-
-export default function HrAttendancePage() {
-  return <PagePlaceholder title="Attendance" description="Attendance management will appear here." />;
+import Workspace from "@/components/Workspace";
+export default function Page() {
+  return <Workspace role="hr" view="attendance" />;
 }

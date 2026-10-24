@@ -1,5 +1,4 @@
-import PagePlaceholder from "@/components/layout/PagePlaceholder";
-
-export default function AdminSettingsPage() {
-  return <PagePlaceholder title="Settings" description="Organization settings will appear here." />;
+import Workspace from "@/components/Workspace";
+export default function Page() {
+  return <Workspace role="admin" view="settings" />;
 }

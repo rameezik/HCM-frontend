@@ -1,5 +1,4 @@
-import PagePlaceholder from "@/components/layout/PagePlaceholder";
-
-export default function HrLeavesPage() {
-  return <PagePlaceholder title="Leaves" description="Leave requests and balances will appear here." />;
+import Workspace from "@/components/Workspace";
+export default function Page() {
+  return <Workspace role="hr" view="leaves" />;
 }

@@ -98,3 +98,45 @@ export const navigation = {
     },
   ],
 };
+for (const role of ["admin", "hr", "employee"]) {
+  if (role === "admin")
+    navigation[role].push(
+      { label: "Attendance", href: "/admin/attendance", icon: "CalendarCheck" },
+      { label: "Leave records", href: "/admin/leaves", icon: "CalendarDays" },
+      {
+        label: "Leave types",
+        href: "/admin/leave-types",
+        icon: "CalendarDays",
+      },
+      {
+        label: "Public holidays",
+        href: "/admin/holidays",
+        icon: "CalendarDays",
+      },
+    );
+  if (role === "hr")
+    navigation[role].push(
+      { label: "Company policy", href: "/hr/settings", icon: "Settings" },
+      { label: "Departments", href: "/hr/departments", icon: "Building2" },
+      {
+        label: "Designations",
+        href: "/hr/designations",
+        icon: "BriefcaseBusiness",
+      },
+      { label: "Leave types", href: "/hr/leave-types", icon: "CalendarDays" },
+      { label: "Public holidays", href: "/hr/holidays", icon: "CalendarDays" },
+    );
+  navigation[role].push(
+    {
+      label: "Announcements",
+      href: `/${role}/announcements`,
+      icon: "ScrollText",
+    },
+    {
+      label: "Notifications",
+      href: `/${role}/notifications`,
+      icon: "CalendarCheck",
+    },
+    { label: "AI assistant", href: `/${role}/assistant`, icon: "UserRound" },
+  );
+}

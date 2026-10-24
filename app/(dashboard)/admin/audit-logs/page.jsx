@@ -1,5 +1,4 @@
-import PagePlaceholder from "@/components/layout/PagePlaceholder";
-
-export default function AdminAuditLogsPage() {
-  return <PagePlaceholder title="Audit logs" description="System activity records will appear here." />;
+import Workspace from "@/components/Workspace";
+export default function Page() {
+  return <Workspace role="admin" view="audit-logs" />;
 }

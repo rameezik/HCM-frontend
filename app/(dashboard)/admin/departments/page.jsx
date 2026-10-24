@@ -1,5 +1,4 @@
-import PagePlaceholder from "@/components/layout/PagePlaceholder";
-
-export default function AdminDepartmentsPage() {
-  return <PagePlaceholder title="Departments" description="Department management will appear here." />;
+import Workspace from "@/components/Workspace";
+export default function Page() {
+  return <Workspace role="admin" view="departments" />;
 }
