@@ -12,8 +12,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "HCM Lite",
-  description: "Human Capital Management for Admin, HR and Employees",
+  title: {
+    default: "HCM Lite | People & Payroll",
+    template: "%s | HCM Lite",
+  },
+  applicationName: "HCM Lite",
+  description:
+    "Manage your people, attendance, leave and payroll with HCM Lite.",
 };
 
 export default function RootLayout({ children }) {

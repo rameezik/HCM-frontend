@@ -52,3 +52,9 @@ The hosted AI adapter and scoped tools are implemented, but live model behavior 
 ## Attendance extension
 
 See [attendance and optional-AI notes](docs/attendance-extension.md). AI-dependent controls are disabled when the backend reports a missing AI_API_KEY; all regular HR workflows remain enabled. Biometric enrollment and face attendance use the application backend’s local OpenCV YuNet/SFace ONNX inference. Install backend models with `bash scripts/setup-local-face.sh` and provision its local template-encryption key with `npm run setup:env`. No cloud biometric credentials are needed. The UI discloses that identity matching does not provide robust liveness or replay protection; ordinary attendance remains available.
+
+## API transport and account flows
+
+The browser and CSV/PDF download links use same-origin `/api`. A Next.js route handler forwards requests and HttpOnly session cookies to Express using the server runtime `API_INTERNAL_URL` (default `http://127.0.0.1:4000`); an origin or a URL ending in `/api` is accepted. For compatibility, `NEXT_PUBLIC_API_URL=http://localhost:4000/api` is also accepted when `API_INTERNAL_URL` is unset. This value selects the server proxy target, rather than enabling cross-site browser credentials. Set the backend `FRONTEND_URL` to the actual frontend origin. Restart the frontend after changing server configuration; no API destination is baked into rewrite rules.
+
+`/login` handles a JSON401 session check as the normal logged-out state. Genuine service/configuration failures remain visible with retry. `/register` creates a real company/Admin/session; `/forgot-password` and `/reset-password` use actual backend recovery APIs. Recovery email requires backend SMTP configuration; no provider key or SMTP credential belongs in frontend variables. The full audit is in `HCM-backend/docs/api-integration-audit.md`.

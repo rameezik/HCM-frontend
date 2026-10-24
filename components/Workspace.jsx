@@ -25,23 +25,34 @@ const nameColumn = {
 const dateTime = (d) =>
   d ? new Date(d).toLocaleString("en-GB", { timeZone: "UTC" }) : "—";
 function useResource(path) {
-  const [state, setState] = useState({ path: null, data: null, error: "" });
+  const [state, setState] = useState({
+    path: null,
+    data: null,
+    error: "",
+    errorStatus: null,
+  });
   const [epoch, setEpoch] = useState(0);
   const refresh = useCallback(() => setEpoch((v) => v + 1), []);
   useEffect(() => {
     const controller = new AbortController();
     if (path)
       api(path, { signal: controller.signal })
-        .then((data) => setState({ path, data, error: "" }))
+        .then((data) => setState({ path, data, error: "", errorStatus: null }))
         .catch((e) => {
           if (!controller.signal.aborted)
-            setState({ path, data: null, error: e.message });
+            setState({
+              path,
+              data: null,
+              error: e.message,
+              errorStatus: e.status,
+            });
         });
     return () => controller.abort();
   }, [path, epoch]);
   return {
     data: state.path === path ? state.data : null,
     error: state.path === path ? state.error : "",
+    errorStatus: state.path === path ? state.errorStatus : null,
     loading: state.path !== path,
     refresh,
   };
@@ -116,10 +127,21 @@ export default function Workspace({ role, view = "dashboard" }) {
   const user = identity.data;
   const [logoutError, setLogoutError] = useState("");
   useEffect(() => {
-    if (identity.error) router.replace("/login");
+    if (identity.errorStatus === 401) router.replace("/login");
     else if (user && user.role !== role)
       router.replace(`/${user.role}/dashboard`);
-  }, [identity.error, user, role, router]);
+  }, [identity.errorStatus, user, role, router]);
+  if (identity.error && identity.errorStatus !== 401)
+    return (
+      <main className="mx-auto w-full max-w-xl p-10">
+        <Panel title="Your workspace could not be loaded">
+          <Message error={identity.error} />
+          <Button secondary onClick={identity.refresh}>
+            Retry connection
+          </Button>
+        </Panel>
+      </main>
+    );
   if (!user || user.role !== role)
     return (
       <p role="status" className="p-10">
@@ -224,7 +246,7 @@ function Dashboard({ user }) {
   const d = stats.data;
   return (
     <div className="space-y-6">
-      <AttendanceAnalytics user={user}/>
+      <AttendanceAnalytics user={user} />
       <Panel title="Reporting period">
         <DateFilters initial={filters} onChange={setFilters} />
       </Panel>
@@ -431,7 +453,7 @@ function Dashboard({ user }) {
                     </Button>
                   }
                 >
-                  <AiAvailability resource={ai}/>
+                  <AiAvailability resource={ai} />
                   <Message error={error} />
                   {summary ? (
                     <>
@@ -539,7 +561,9 @@ function Settings({ user }) {
   return (
     <Panel title="Company policy">
       <p className="mb-5 text-sm text-zinc-400">
-        Attendance uses your company timezone and shift hours. Records retain their policy snapshot; stored timestamps remain UTC. Weekend numbers: Sunday 0 through Saturday 6.
+        Attendance uses your company timezone and shift hours. Records retain
+        their policy snapshot; stored timestamps remain UTC. Weekend numbers:
+        Sunday 0 through Saturday 6.
       </p>
       <Resource resource={resource}>
         {resource.data &&
@@ -556,10 +580,33 @@ function Settings({ user }) {
                   label: "Office start (company timezone)",
                   type: "time",
                 },
-                { name: "timezone", label: "Company timezone (IANA)", defaultValue: "UTC" },
-                { name: "officeEnd", label: "Office end (company timezone)", type: "time", defaultValue: "17:00" },
-                { name: "maxShiftHours", label: "Maximum shift duration (hours)", type: "number", min: 1, max: 24, defaultValue:20 },
-                { name: "biometricRetentionDays", label: "Biometric retention (days)", type: "number", min: 1, max:365, defaultValue:365 },
+                {
+                  name: "timezone",
+                  label: "Company timezone (IANA)",
+                  defaultValue: "UTC",
+                },
+                {
+                  name: "officeEnd",
+                  label: "Office end (company timezone)",
+                  type: "time",
+                  defaultValue: "17:00",
+                },
+                {
+                  name: "maxShiftHours",
+                  label: "Maximum shift duration (hours)",
+                  type: "number",
+                  min: 1,
+                  max: 24,
+                  defaultValue: 20,
+                },
+                {
+                  name: "biometricRetentionDays",
+                  label: "Biometric retention (days)",
+                  type: "number",
+                  min: 1,
+                  max: 365,
+                  defaultValue: 365,
+                },
                 {
                   name: "graceMinutes",
                   label: "Grace period (minutes)",
@@ -889,7 +936,7 @@ function Csv({ onImported }) {
   const [result, setResult] = useState(null);
   return (
     <Panel title="Employee CSV">
-      <a
+      <a download
         href="/api/employees/export"
         className="mb-5 inline-block text-sm text-[#82cde6] underline"
       >
@@ -1031,8 +1078,12 @@ function Attendance({ user }) {
           <CheckButtons onChange={resource.refresh} />
         </Panel>
       )}
-      {user.role !== 'admin' && <Panel title="Verified face attendance"><FaceVerification user={user} onRecorded={resource.refresh}/></Panel>}
-      <AttendanceAnalytics user={user}/>
+      {user.role !== "admin" && (
+        <Panel title="Verified face attendance">
+          <FaceVerification user={user} onRecorded={resource.refresh} />
+        </Panel>
+      )}
+      <AttendanceAnalytics user={user} />
       <Panel title="Attendance filters">
         <DateFilters initial={filters} onChange={setFilters} />
       </Panel>
@@ -1108,7 +1159,8 @@ function Attendance({ user }) {
                       key: "actions",
                       label: "",
                       render: (r) =>
-                        r.status === "pending" && (
+                        r.status === "pending" &&
+                        String(r.employee?._id) !== String(user.employee) && (
                           <Button secondary onClick={() => setDecision(r)}>
                             Review
                           </Button>
@@ -1194,7 +1246,7 @@ function Leaves({ user }) {
             )}
           </Panel>
           <Panel title="Smart leave">
-            <AiAvailability resource={ai}/>
+            <AiAvailability resource={ai} />
             <p className="mb-4 text-sm text-zinc-400">
               Describe your leave in plain words. Review the AI-generated dates
               before submitting the form.
@@ -1426,6 +1478,7 @@ function Payroll({ user }) {
                     <a
                       className="text-[#82cde6] underline"
                       href={`/api/payroll/${run._id}/payslip/${r.employee}`}
+                      download
                     >
                       Download PDF
                     </a>
@@ -1688,7 +1741,7 @@ function Assistant() {
   const [history, setHistory] = useState([]);
   return (
     <Panel title="Ask your assistant">
-      <AiAvailability resource={ai}/>
+      <AiAvailability resource={ai} />
       <p className="mb-5 text-sm text-zinc-400">
         Answers use your role and data scope. The assistant cannot save or
         approve records.
@@ -1782,8 +1835,21 @@ function TrendChart({ rows }) {
   );
 }
 
-function AiAvailability({resource}) {
-  if(resource.loading)return <p className="mb-3 text-sm text-zinc-400" role="status">Checking optional AI availability…</p>;
-  if(resource.data?.configured)return null;
-  return <p className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-400" role="status">{resource.data?.message || 'AI availability could not be checked. Regular forms and reports remain available.'}</p>;
+function AiAvailability({ resource }) {
+  if (resource.loading)
+    return (
+      <p className="mb-3 text-sm text-zinc-400" role="status">
+        Checking optional AI availability…
+      </p>
+    );
+  if (resource.data?.configured) return null;
+  return (
+    <p
+      className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-400"
+      role="status"
+    >
+      {resource.data?.message ||
+        "AI availability could not be checked. Regular forms and reports remain available."}
+    </p>
+  );
 }

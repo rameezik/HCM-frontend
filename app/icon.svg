@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <title>HCM Lite</title>
+  <rect x="1" y="1" width="30" height="30" rx="8" fill="#111116"/>
+  <rect x="1.5" y="1.5" width="29" height="29" rx="7.5" stroke="#343440"/>
+  <path d="M8 9H13V14H19V9H24V25H19V19H13V25H8V9Z" fill="#3BC2E7"/>
+  <path d="M13 14H19V19H13V14Z" fill="#F4F4F5"/>
+  <circle cx="25" cy="7" r="2.5" fill="#FB7185"/>
+</svg>
