@@ -1,4 +1,5 @@
 import { proxyApi } from "@/lib/server-api-proxy";
+export const maxDuration = 90;
 
 async function handle(request, context) {
   const { path } = await context.params;

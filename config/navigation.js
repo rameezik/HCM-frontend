@@ -21,7 +21,7 @@ export const navigation = {
       icon: "BriefcaseBusiness",
     },
     {
-      label: "User Management",
+      label: "HR Management",
       href: "/admin/users",
       icon: "UserCog",
     },
@@ -141,4 +141,9 @@ for (const role of ["admin", "hr", "employee"]) {
   );
 }
 
-for (const role of ["employee", "hr"]) navigation[role].push({label:"Face enrollment",href:`/${role}/face-enrollment`,icon:"UserRound"});
+for (const role of ["employee", "hr"])
+  navigation[role].push({
+    label: "Face enrollment",
+    href: `/${role}/face-enrollment`,
+    icon: "UserRound",
+  });

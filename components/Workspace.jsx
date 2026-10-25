@@ -1,10 +1,12 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import AttendanceAnalytics from "@/components/attendance/AttendanceAnalytics";
 import FaceVerification from "@/components/attendance/FaceVerification";
 import BiometricEnrollment from "@/components/attendance/BiometricEnrollment";
+import { CompanyOverview, EmployeeOverview, WorkspaceActions } from '@/components/CompanyOverview';
 import { api } from "@/lib/api";
 import {
   Panel,
@@ -157,7 +159,7 @@ export default function Workspace({ role, view = "dashboard" }) {
     leaves: <Leaves user={user} />,
     payroll: <Payroll user={user} />,
     payslips: <Payroll user={user} />,
-    users: <Users />,
+    users: <Users user={user} />,
     settings: <Settings user={user} />,
     departments: <Catalog kind="departments" user={user} />,
     designations: <Catalog kind="designations" user={user} />,
@@ -244,8 +246,23 @@ function Dashboard({ user }) {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const d = stats.data;
+  const refreshStats = stats.refresh;
+  useEffect(() => {
+    const refresh = () => refreshStats();
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 15000);
+    window.addEventListener('attendance-updated', refresh);
+    window.addEventListener('focus', refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener('attendance-updated', refresh); window.removeEventListener('focus', refresh); };
+  }, [refreshStats]);
   return (
     <div className="space-y-6">
+      <WorkspaceActions user={user} />
+      {user.role === 'employee' ? (
+        <>
+          <EmployeeOverview user={user} />
+          <Panel title="Face-verified attendance"><FaceVerification user={user} onRecorded={stats.refresh} /></Panel>
+        </>
+      ) : <Resource resource={stats}><CompanyOverview summary={d?.companySummary} /></Resource>}
       <AttendanceAnalytics user={user} />
       <Panel title="Reporting period">
         <DateFilters initial={filters} onChange={setFilters} />
@@ -293,7 +310,7 @@ function Dashboard({ user }) {
             </div>
             {user.role === "employee" && (
               <>
-                <Panel title="Today’s attendance">
+                <Panel title="Authorized attendance without face">
                   <CheckButtons onChange={stats.refresh} />
                 </Panel>
                 <Panel title="Leave remaining">
@@ -478,11 +495,62 @@ function Dashboard({ user }) {
     </div>
   );
 }
+function employeeDetails(employee) {
+  return Object.fromEntries(
+    [
+      "name",
+      "email",
+      "code",
+      "department",
+      "designation",
+      "joinDate",
+      "exitDate",
+      "status",
+      "gender",
+      "basic",
+      "phone",
+      "address",
+    ].flatMap((key) =>
+      employee[key] === undefined
+        ? []
+        : [
+            [
+              key,
+              ["department", "designation"].includes(key)
+                ? employee[key]?._id || employee[key]
+                : employee[key],
+            ],
+          ],
+    ),
+  );
+}
 function Catalog({ kind, user }) {
   const resource = useResource(`/${kind}`),
-    [edit, setEdit] = useState(null);
+    [edit, setEdit] = useState(null),
+    [selected, setSelected] = useState(null),
+    [confirmDelete, setConfirmDelete] = useState(null);
+  const canManage =
+    user.role === "admin" ||
+    (user.role === "hr" && ["departments", "designations"].includes(kind));
+  const action = useAction(() => {
+    resource.refresh();
+    setConfirmDelete(null);
+  });
+  const members = useResource(
+    kind === "departments" && selected
+      ? `/employees?department=${selected._id}&limit=100`
+      : null,
+  );
+  const employees = useResource(
+    kind === "departments" && selected && canManage
+      ? "/employees?limit=100"
+      : null,
+  );
   const fields = [
-    { name: "name", label: "Name" },
+    {
+      name: "name",
+      label: kind === "departments" ? "Department name" : "Name",
+    },
     ...(kind === "holidays"
       ? [{ name: "date", type: "date", label: "Holiday date" }]
       : []),
@@ -501,13 +569,28 @@ function Catalog({ kind, user }) {
   ];
   return (
     <div className="space-y-6">
-      {user.role === "admin" && (
-        <Panel title={edit ? "Edit record" : "Add record"}>
+      {canManage && (
+        <Panel
+          title={
+            edit
+              ? "Edit record"
+              : kind === "departments"
+                ? "Create department"
+                : "Add record"
+          }
+        >
           <Form
             key={edit?._id || "new"}
             fields={fields}
             initial={edit || {}}
             onCancel={edit ? () => setEdit(null) : undefined}
+            submitLabel={
+              edit
+                ? "Save changes"
+                : kind === "departments"
+                  ? "Create department"
+                  : "Create record"
+            }
             onSubmit={async (body) => {
               await api(`/${kind}${edit ? `/${edit._id}` : ""}`, {
                 method: edit ? "PUT" : "POST",
@@ -520,31 +603,57 @@ function Catalog({ kind, user }) {
         </Panel>
       )}
       <Panel title={kind.replaceAll("-", " ")}>
+        <Message error={action.error} success={action.success} />
         <Resource resource={resource}>
           <Table
             rows={resource.data}
             columns={[
               { key: "name" },
+              ...(kind === "departments"
+                ? [
+                    {
+                      key: "employeeCount",
+                      label: "Employees",
+                      render: (row) => row.employeeCount ?? "—",
+                    },
+                  ]
+                : []),
               ...(kind === "holidays" ? [{ key: "date" }] : []),
               ...(kind === "leave-types"
                 ? [
                     { key: "quota" },
                     {
                       key: "unpaid",
-                      render: (r) => (r.unpaid ? "Unlimited" : "Paid"),
+                      render: (row) => (row.unpaid ? "Unlimited" : "Paid"),
                     },
                   ]
                 : []),
               { key: "_id", label: "Record ID" },
-              ...(user.role === "admin"
+              ...(canManage
                 ? [
                     {
                       key: "actions",
-                      label: "",
-                      render: (r) => (
-                        <Button secondary onClick={() => setEdit(r)}>
-                          Edit
-                        </Button>
+                      label: "Actions",
+                      render: (row) => (
+                        <div className="flex flex-wrap gap-2">
+                          <Button secondary onClick={() => setEdit(row)}>
+                            Edit
+                          </Button>
+                          {kind === "departments" && (
+                            <Button secondary onClick={() => setSelected(row)}>
+                              View employees
+                            </Button>
+                          )}
+                          {["departments", "designations"].includes(kind) && (
+                            <Button
+                              secondary
+                              disabled={action.busy}
+                              onClick={() => setConfirmDelete(row)}
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </div>
                       ),
                     },
                   ]
@@ -553,6 +662,98 @@ function Catalog({ kind, user }) {
           />
         </Resource>
       </Panel>
+      {confirmDelete && (
+        <Panel title={`Remove ${confirmDelete.name}?`}>
+          <p className="mb-4 text-sm text-zinc-400">
+            Only unused organization records can be removed. Employees and their
+            history are preserved.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              disabled={action.busy}
+              onClick={() =>
+                action.act(`/${kind}/${confirmDelete._id}`, "DELETE")
+              }
+            >
+              Confirm removal
+            </Button>
+            <Button secondary onClick={() => setConfirmDelete(null)}>
+              Cancel
+            </Button>
+          </div>
+        </Panel>
+      )}
+      {kind === "departments" && selected && (
+        <Panel
+          title={`Department employees · ${selected.name}`}
+          action={
+            <Button secondary onClick={() => setSelected(null)}>
+              Close
+            </Button>
+          }
+        >
+          <Resource resource={members}>
+            <Table
+              rows={members.data?.items}
+              columns={[
+                { key: "name" },
+                { key: "code", label: "Employee ID" },
+                { key: "email" },
+                { key: "status", render: (row) => tag(row.status) },
+              ]}
+            />
+            <p className="mt-4 text-sm text-zinc-400">
+              {members.data?.total ?? "—"} employees in this department. Up to
+              100 records are shown; use Employees to search the full directory.
+            </p>
+          </Resource>
+          {canManage && (
+            <div className="mt-6 border-t border-white/10 pt-5">
+              <h3 className="mb-4 font-medium">
+                Assign employee to this department
+              </h3>
+              <Message error={employees.error} />
+              <Form
+                key={selected._id}
+                fields={[
+                  {
+                    name: "employee",
+                    label: "Employee",
+                    options: (employees.data?.items || [])
+                      .filter(
+                        (row) =>
+                          user.role === "admin" ||
+                          row.user?.role === "employee",
+                      )
+                      .map((row) => ({
+                        value: row._id,
+                        label: `${row.name} · ${row.code}`,
+                      })),
+                  },
+                ]}
+                submitLabel="Assign department"
+                onSubmit={async (body) => {
+                  const employee = employees.data?.items.find(
+                    (row) => row._id === body.employee,
+                  );
+                  if (!employee)
+                    throw new Error("Choose an available employee.");
+                  await api(`/employees/${employee._id}`, {
+                    method: "PATCH",
+                    body: {
+                      ...employeeDetails(employee),
+                      department: selected._id,
+                    },
+                  });
+                  resource.refresh();
+                  members.refresh();
+                  employees.refresh();
+                }}
+              />
+            </div>
+          )}
+        </Panel>
+      )}
     </div>
   );
 }
@@ -691,30 +892,50 @@ function Employees({ user }) {
     page: 1,
   });
   const resource = useResource(
-    `/employees?${new URLSearchParams(Object.entries(filters).filter(([, v]) => v !== ""))}`,
+    `/employees?${new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== ""))}`,
   );
   const deps = useResource("/departments"),
     designations = useResource("/designations");
   const [edit, setEdit] = useState(null),
     [selected, setSelected] = useState(null),
-    [showCreate, setShowCreate] = useState(false);
+    [showCreate, setShowCreate] = useState(false),
+    [reset, setReset] = useState(null);
+  const canManage = ["admin", "hr"].includes(user.role),
+    action = useAction(resource.refresh);
   const fields = [
     { name: "name", label: "Full name" },
     { name: "email", type: "email", label: "Work email" },
-    { name: "code", label: "Employee code" },
+    { name: "code", label: "Employee ID" },
     {
       name: "department",
       label: "Department",
-      options: (deps.data || []).map((d) => ({ value: d._id, label: d.name })),
+      options: (deps.data || []).map((row) => ({
+        value: row._id,
+        label: row.name,
+      })),
     },
     {
       name: "designation",
       label: "Designation",
-      options: (designations.data || []).map((d) => ({
-        value: d._id,
-        label: d.name,
+      options: (designations.data || []).map((row) => ({
+        value: row._id,
+        label: row.name,
       })),
     },
+    ...(user.role === "admin"
+      ? [
+          {
+            name: "role",
+            label: "Account role",
+            options: [
+              { value: "employee", label: "Employee" },
+              { value: "hr", label: "HR" },
+              { value: "admin", label: "Admin" },
+            ],
+            defaultValue: "employee",
+          },
+        ]
+      : []),
     { name: "joinDate", type: "date", label: "Joining date" },
     { name: "exitDate", type: "date", label: "Exit date", optional: true },
     {
@@ -725,9 +946,9 @@ function Employees({ user }) {
     },
     {
       name: "gender",
+      label: "Gender",
       options: ["female", "male", "other", "unspecified"],
       defaultValue: "unspecified",
-      label: "Gender",
     },
     {
       name: "basic",
@@ -743,6 +964,7 @@ function Employees({ user }) {
             name: "password",
             type: "password",
             minLength: 12,
+            autoComplete: "new-password",
             label: "Temporary password",
           },
         ]
@@ -753,28 +975,47 @@ function Employees({ user }) {
       <Panel
         title="Find employees"
         action={
-          user.role === "hr" && (
+          canManage && (
             <Button
               onClick={() => {
-                setShowCreate(!showCreate);
+                setShowCreate((value) => !value);
                 setEdit(null);
               }}
             >
-              Register employee
+              Create employee account
             </Button>
           )
         }
       >
+        <p className="mb-5 text-sm text-zinc-400">
+          Create and manage real company accounts.{" "}
+          {user.role === "admin"
+            ? "Assign Employee, HR or Admin roles. "
+            : "HR can manage employee profiles; privileged staff accounts remain under Admin control. "}
+          <Link
+            href={`/${user.role}/departments`}
+            className="text-[#82cde6] underline"
+          >
+            Manage departments
+          </Link>{" "}
+          ·{" "}
+          <Link
+            href={`/${user.role}/designations`}
+            className="text-[#82cde6] underline"
+          >
+            Manage designations
+          </Link>
+        </p>
         <Form
           initial={filters}
           fields={[
-            { name: "search", label: "Name, code or email", optional: true },
+            { name: "search", label: "Name, ID or email", optional: true },
             {
               name: "department",
               label: "Department",
-              options: (deps.data || []).map((d) => ({
-                value: d._id,
-                label: d.name,
+              options: (deps.data || []).map((row) => ({
+                value: row._id,
+                label: row.name,
               })),
               optional: true,
             },
@@ -784,25 +1025,36 @@ function Employees({ user }) {
           onSubmit={async (body) => setFilters({ ...body, page: 1 })}
         />
       </Panel>
-      <Message error={deps.error || designations.error} />
-      {(showCreate || edit) && user.role === "hr" && (
+      <Message
+        error={deps.error || designations.error || action.error}
+        success={action.success}
+      />
+      {(showCreate || edit) && canManage && (
         <Panel
-          title={
-            edit ? "Edit employee and salary structure" : "Register employee"
-          }
+          title={edit ? "Edit employee account" : "Create employee account"}
         >
+          <p className="mb-5 text-sm text-zinc-400">
+            Share temporary credentials securely with the account holder. Their
+            first login requires a new password before workspace access.
+          </p>
+          {(!deps.data?.length || !designations.data?.length) && (
+            <p className="mb-5 rounded-xl border border-amber-300/20 p-4 text-sm text-amber-100">
+              Create a department and designation first using the links above.
+            </p>
+          )}
           <Form
             key={edit?._id || "new"}
             fields={fields}
             initial={
               edit
                 ? {
-                    ...edit,
-                    department: edit.department?._id,
-                    designation: edit.designation?._id,
+                    ...employeeDetails(edit),
+                    role: edit.user?.role || "employee",
                   }
                 : {}
             }
+            disabled={!deps.data?.length || !designations.data?.length}
+            submitLabel={edit ? "Save employee changes" : "Create account"}
             onCancel={() => {
               setShowCreate(false);
               setEdit(null);
@@ -825,34 +1077,79 @@ function Employees({ user }) {
             rows={resource.data?.items}
             columns={[
               { key: "name" },
-              { key: "code" },
+              { key: "code", label: "Employee ID" },
               { key: "email" },
-              { key: "department", render: (r) => r.department?.name },
-              { key: "status", render: (r) => tag(r.status) },
+              { key: "department", render: (row) => row.department?.name },
+              { key: "designation", render: (row) => row.designation?.name },
+              {
+                key: "role",
+                label: "Role",
+                render: (row) => row.user?.role ? tag(row.user.role) : "No linked login",
+              },
+              {
+                key: "status",
+                label: "Employment",
+                render: (row) => tag(row.status),
+              },
+              {
+                key: "active",
+                label: "Login access",
+                render: (row) =>
+                  !row.user?._id
+                    ? "No linked login"
+                    : row.user.active === false
+                    ? "Deactivated"
+                    : row.user?.mustChangePassword
+                      ? "Activation: password change required"
+                      : "Active",
+              },
+              { key: "joinDate", label: "Joined" },
               {
                 key: "basic",
                 label: "Gross salary",
-                render: (r) => money(r.basic * 1.5),
+                render: (row) => money(row.basic * 1.5),
               },
               {
                 key: "actions",
-                label: "",
-                render: (r) => (
-                  <div className="flex gap-2">
-                    <Button secondary onClick={() => setSelected(r._id)}>
+                label: "Actions",
+                render: (row) => (
+                  <div className="flex flex-wrap gap-2">
+                    <Button secondary onClick={() => setSelected(row._id)}>
                       360° profile
                     </Button>
-                    {user.role === "hr" && (
+                    {(user.role === "admin" ||
+                      (user.role === "hr" &&
+                        row.user?.role === "employee")) && (
                       <Button
                         secondary
                         onClick={() => {
-                          setEdit(r);
+                          setEdit(row);
                           setShowCreate(false);
                         }}
                       >
                         Edit
                       </Button>
                     )}
+                    {user.role === "admin" &&
+                      row.user?._id &&
+                      String(row.user._id) !== String(user._id) && (
+                        <>
+                          <Button
+                            secondary
+                            disabled={action.busy}
+                            onClick={() =>
+                              action.act(`/users/${row.user._id}`, "PATCH", {
+                                active: !row.user.active,
+                              })
+                            }
+                          >
+                            {row.user.active ? "Deactivate" : "Activate"}
+                          </Button>
+                          <Button secondary onClick={() => setReset(row)}>
+                            Reset access
+                          </Button>
+                        </>
+                      )}
                   </div>
                 ),
               },
@@ -862,7 +1159,9 @@ function Employees({ user }) {
             <Button
               secondary
               disabled={filters.page <= 1}
-              onClick={() => setFilters((f) => ({ ...f, page: f.page - 1 }))}
+              onClick={() =>
+                setFilters((value) => ({ ...value, page: value.page - 1 }))
+              }
             >
               Previous
             </Button>
@@ -873,7 +1172,9 @@ function Employees({ user }) {
             <Button
               secondary
               disabled={filters.page >= (resource.data?.pages || 1)}
-              onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))}
+              onClick={() =>
+                setFilters((value) => ({ ...value, page: value.page + 1 }))
+              }
             >
               Next
             </Button>
@@ -882,8 +1183,35 @@ function Employees({ user }) {
       </Panel>
       {selected && (
         <Employee360 id={selected} onClose={() => setSelected(null)} />
-      )}{" "}
-      {user.role === "hr" && <Csv onImported={resource.refresh} />}
+      )}
+      {reset && (
+        <Panel title={`Reset access · ${reset.name}`}>
+          <p className="mb-5 text-sm text-zinc-400">
+            Set a new temporary password and deliver it through a secure
+            channel. Existing sessions are revoked and a password change is
+            required at next login.
+          </p>
+          <Form
+            fields={[
+              {
+                name: "password",
+                label: "New temporary password",
+                type: "password",
+                minLength: 12,
+                autoComplete: "new-password",
+              },
+            ]}
+            submitLabel="Reset access"
+            onCancel={() => setReset(null)}
+            onSubmit={async (body) => {
+              await api(`/users/${reset.user._id}`, { method: "PATCH", body });
+              setReset(null);
+              resource.refresh();
+            }}
+          />
+        </Panel>
+      )}
+      {["admin", "hr"].includes(user.role) && <Csv onImported={resource.refresh} />}
     </div>
   );
 }
@@ -936,7 +1264,8 @@ function Csv({ onImported }) {
   const [result, setResult] = useState(null);
   return (
     <Panel title="Employee CSV">
-      <a download
+      <a
+        download
         href="/api/employees/export"
         className="mb-5 inline-block text-sm text-[#82cde6] underline"
       >
@@ -1043,14 +1372,14 @@ function CheckButtons({ onChange }) {
           disabled={action.busy}
           onClick={() => action.act("/attendance/check-in")}
         >
-          Check in
+          Check in without face
         </Button>
         <Button
           secondary
           disabled={action.busy}
           onClick={() => action.act("/attendance/check-out")}
         >
-          Check out
+          Check out without face
         </Button>
       </div>
       <p className="mt-3 text-xs text-zinc-400">
@@ -1074,13 +1403,13 @@ function Attendance({ user }) {
   return (
     <div className="space-y-6">
       {user.role !== "admin" && (
-        <Panel title="Web attendance">
-          <CheckButtons onChange={resource.refresh} />
+        <Panel title="Verified face attendance">
+          <FaceVerification user={user} onRecorded={resource.refresh} />
         </Panel>
       )}
       {user.role !== "admin" && (
-        <Panel title="Verified face attendance">
-          <FaceVerification user={user} onRecorded={resource.refresh} />
+        <Panel title="Authorized attendance without face">
+          <CheckButtons onChange={resource.refresh} />
         </Panel>
       )}
       <AttendanceAnalytics user={user} />
@@ -1153,7 +1482,7 @@ function Attendance({ user }) {
               { key: "reason" },
               { key: "status" },
               { key: "comment" },
-              ...(user.role === "hr"
+              ...(["admin", "hr"].includes(user.role)
                 ? [
                     {
                       key: "actions",
@@ -1304,7 +1633,7 @@ function Leaves({ user }) {
       )}
       <Panel
         title={
-          user.role === "hr"
+          ["admin", "hr"].includes(user.role)
             ? "Leave approval inbox and history"
             : "Leave history"
         }
@@ -1326,7 +1655,7 @@ function Leaves({ user }) {
                 label: "",
                 render: (r) => (
                   <div className="flex gap-2">
-                    {user.role === "hr" &&
+                    {["admin", "hr"].includes(user.role) &&
                       r.status === "pending" &&
                       String(r.employee?._id) !== String(user.employee) && (
                         <Button
@@ -1386,7 +1715,7 @@ function Payroll({ user }) {
   const run = resource.data?.find((r) => r._id === selected);
   return (
     <div className="space-y-6">
-      {user.role === "hr" && (
+      {["admin", "hr"].includes(user.role) && (
         <Panel title="Prepare monthly payroll">
           <p className="mb-4 text-sm text-zinc-400">
             A draft can be regenerated until Admin finalizes it. Missing working
@@ -1515,76 +1844,116 @@ function Payroll({ user }) {
     </div>
   );
 }
-function Users() {
+function Users({ user }) {
   const resource = useResource("/users"),
     employees = useResource("/employees?limit=100");
   const [selected, setSelected] = useState(null),
+    [roleEdit, setRoleEdit] = useState(null),
     action = useAction(resource.refresh);
   return (
     <div className="space-y-6">
-      <Panel title="Create HR login">
+      <Panel title="Create HR or Admin login">
         <p className="mb-4 text-sm text-zinc-400">
-          Optionally promote an employee login to HR to enable HR self-service.
-          The temporary password must be changed at first sign-in.
+          Create a staff login or promote an existing employee account. To
+          create an HR account with a complete employee profile, use{" "}
+          <Link href="/admin/employees" className="text-[#82cde6] underline">
+            Employees
+          </Link>{" "}
+          and select the HR role. Temporary credentials require a password
+          change at first login.
         </p>
         <Form
           fields={[
             { name: "name", label: "Full name" },
             { name: "email", type: "email", label: "Email" },
             {
+              name: "role",
+              label: "Account role",
+              defaultValue: "hr",
+              options: [
+                { value: "hr", label: "HR" },
+                { value: "admin", label: "Admin" },
+                { value: "employee", label: "Employee (link a profile below)" },
+              ],
+            },
+            {
               name: "password",
               type: "password",
               minLength: 12,
+              autoComplete: "new-password",
               label: "Temporary password",
             },
             {
               name: "employee",
-              label: "Link employee (promotes existing login)",
+              label: "Link existing employee",
               optional: true,
-              options: (employees.data?.items || []).map((e) => ({
-                value: e._id,
-                label: `${e.name} · ${e.code}`,
-              })),
+              options: (employees.data?.items || [])
+                .filter((row) => row.user?.role === "employee")
+                .map((row) => ({
+                  value: row._id,
+                  label: `${row.name} · ${row.code}`,
+                })),
             },
           ]}
+          submitLabel="Create staff account"
           onSubmit={async (body) => {
+            if (body.role === "employee" && !body.employee)
+              throw new Error(
+                "Create employee accounts from Employees, or choose an existing employee profile.",
+              );
             await api("/users", { method: "POST", body });
             resource.refresh();
+            employees.refresh();
           }}
         />
       </Panel>
-      <Panel title="Login management">
-        <Message error={action.error} success={action.success} />
+      <Panel title="HR management and login access">
+        <Message
+          error={action.error || employees.error}
+          success={action.success}
+        />
         <Resource resource={resource}>
           <Table
             rows={resource.data}
             columns={[
               { key: "name" },
               { key: "email" },
-              { key: "role" },
+              { key: "role", render: (row) => tag(row.role) },
               {
                 key: "active",
-                render: (r) => (r.active ? "Active" : "Deactivated"),
+                label: "Access",
+                render: (row) => (row.active ? "Active" : "Deactivated"),
+              },
+              {
+                key: "mustChangePassword",
+                label: "Activation",
+                render: (row) =>
+                  row.mustChangePassword
+                    ? "First password change required"
+                    : "Activated",
               },
               {
                 key: "actions",
-                label: "",
-                render: (r) =>
-                  r.role !== "admin" && (
-                    <div className="flex gap-2">
+                label: "Actions",
+                render: (row) =>
+                  String(row._id) !== String(user._id) && (
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         secondary
                         disabled={action.busy}
                         onClick={() =>
-                          action.act(`/users/${r._id}`, "PATCH", {
-                            active: !r.active,
+                          action.act(`/users/${row._id}`, "PATCH", {
+                            active: !row.active,
                           })
                         }
                       >
-                        {r.active ? "Deactivate" : "Activate"}
+                        {row.active ? "Deactivate" : "Activate"}
                       </Button>
-                      <Button secondary onClick={() => setSelected(r)}>
-                        Reset password
+                      <Button secondary onClick={() => setRoleEdit(row)}>
+                        Change role
+                      </Button>
+                      <Button secondary onClick={() => setSelected(row)}>
+                        Reset access
                       </Button>
                     </div>
                   ),
@@ -1593,8 +1962,34 @@ function Users() {
           />
         </Resource>
       </Panel>
+      {roleEdit && (
+        <Panel title={`Change role · ${roleEdit.name}`}>
+          <Form
+            initial={{ role: roleEdit.role }}
+            fields={[
+              {
+                name: "role",
+                label: "Account role",
+                options: ["admin", "hr", "employee"],
+              },
+            ]}
+            submitLabel="Save role"
+            onCancel={() => setRoleEdit(null)}
+            onSubmit={async (body) => {
+              await api(`/users/${roleEdit._id}`, { method: "PATCH", body });
+              setRoleEdit(null);
+              resource.refresh();
+            }}
+          />
+        </Panel>
+      )}
       {selected && (
-        <Panel title={`Reset login · ${selected.name}`}>
+        <Panel title={`Reset access · ${selected.name}`}>
+          <p className="mb-5 text-sm text-zinc-400">
+            Set and securely deliver a new temporary password. Previous sessions
+            are revoked and the account holder must change it before using the
+            workspace.
+          </p>
           <Form
             fields={[
               {
@@ -1602,8 +1997,10 @@ function Users() {
                 label: "New temporary password",
                 type: "password",
                 minLength: 12,
+                autoComplete: "new-password",
               },
             ]}
+            submitLabel="Reset access"
             onCancel={() => setSelected(null)}
             onSubmit={async (body) => {
               await api(`/users/${selected._id}`, { method: "PATCH", body });

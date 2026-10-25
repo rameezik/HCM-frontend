@@ -15,6 +15,19 @@ import {
 
 export const LiveFaceCapture = LocalFaceCapture;
 
+const serverTime = (value) =>
+  value && Number.isFinite(Date.parse(value))
+    ? new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        timeZoneName: "short",
+      }).format(new Date(value))
+    : "Not recorded";
+
 export default function FaceVerification({ user, onRecorded, onChange }) {
   const linked = !user || Boolean(user.employee);
   const {
@@ -27,7 +40,12 @@ export default function FaceVerification({ user, onRecorded, onChange }) {
     [busy, setBusy] = useState(false),
     [phase, setPhase] = useState(""),
     [error, setError] = useState(""),
-    [success, setSuccess] = useState("");
+    [success, setSuccess] = useState(""),
+    [lastRecord, setLastRecord] = useState(null);
+  const attendance = status?.attendance || lastRecord;
+  const attendanceKnown =
+    Boolean(lastRecord) || status?.attendance !== undefined;
+  const checkedIn = Boolean(attendance?.checkIn && !attendance?.checkOut);
   const role = user?.role === "hr" ? "hr" : "employee";
   async function begin(action) {
     setBusy(true);
@@ -66,10 +84,25 @@ export default function FaceVerification({ user, onRecorded, onChange }) {
           samples,
         },
       });
+      const timestamp =
+        capture.action === "check-in" ? record.checkIn : record.checkOut;
+      const method =
+        capture.action === "check-in"
+          ? record.verificationMethod
+          : record.checkOutVerification?.method;
+      if (
+        method !== "face" ||
+        !timestamp ||
+        !Number.isFinite(Date.parse(timestamp))
+      )
+        throw new Error(
+          "The attendance confirmation is incomplete. Check your history before trying again.",
+        );
+      setLastRecord(record);
       setSuccess(
         capture.action === "check-in"
-          ? "Face-verified check-in saved."
-          : "Face-verified check-out saved.",
+          ? `Face-verified check-in saved at ${serverTime(timestamp)}.`
+          : `Face-verified check-out saved at ${serverTime(timestamp)}. Working duration: ${Number(record.hours || 0).toFixed(2)} hours.`,
       );
       notifyAttendanceChanged();
       refresh();
@@ -103,12 +136,50 @@ export default function FaceVerification({ user, onRecorded, onChange }) {
       </div>
       <p className="text-sm leading-6 text-zinc-400">
         Optional face matching runs locally on the application server with an
-        office-location check. Camera frames are processed in memory and are
-        not retained as photographs. This does not provide reliable liveness or
+        office-location check. Camera frames are processed in memory and are not
+        retained as photographs. This does not provide reliable liveness or
         anti-spoofing protection. Web attendance and HR corrections remain
         available without biometric consent.
       </p>
       <Message error={statusError || error} success={success} />
+      {status?.enrollment?.enrolled && (
+        <p className="text-sm text-[#82cde6]">
+          Face enrollment active. Your camera samples will be compared with your
+          own protected template.
+        </p>
+      )}
+      {attendance?.checkIn && (
+        <div className="grid gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm sm:grid-cols-3">
+          <div>
+            <p className="text-zinc-500">Last check-in</p>
+            <time
+              className="mt-1 block text-zinc-200"
+              dateTime={attendance.checkIn}
+            >
+              {serverTime(attendance.checkIn)}
+            </time>
+          </div>
+          <div>
+            <p className="text-zinc-500">Check-out</p>
+            {attendance.checkOut ? (
+              <time
+                className="mt-1 block text-zinc-200"
+                dateTime={attendance.checkOut}
+              >
+                {serverTime(attendance.checkOut)}
+              </time>
+            ) : (
+              <p className="mt-1 text-[#82cde6]">Currently checked in</p>
+            )}
+          </div>
+          <div>
+            <p className="text-zinc-500">Recorded working hours</p>
+            <p className="mt-1 text-zinc-200">
+              {Number(attendance.hours || 0).toFixed(2)} hours
+            </p>
+          </div>
+        </div>
+      )}
       {loading ? (
         <p role="status" className="text-sm text-zinc-400">
           Checking enrollment and local model status…
@@ -130,17 +201,26 @@ export default function FaceVerification({ user, onRecorded, onChange }) {
           Complete face enrollment with your consent before using this
           attendance method.
         </p>
+      ) : status.officeConfigured === false ? (
+        <div className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100">
+          Office location setup is required for face attendance. Ask your
+          administrator to save office coordinates and radius in Company
+          settings. Your enrollment remains active; authorized manual attendance
+          is available meanwhile.
+        </div>
       ) : (
         <div className="flex flex-wrap gap-3">
           <Button
-            disabled={busy || Boolean(capture)}
+            disabled={busy || Boolean(capture) || checkedIn}
             onClick={() => begin("check-in")}
           >
             Check in with face
           </Button>
           <Button
             secondary
-            disabled={busy || Boolean(capture)}
+            disabled={
+              busy || Boolean(capture) || (attendanceKnown && !checkedIn)
+            }
             onClick={() => begin("check-out")}
           >
             Check out with face
