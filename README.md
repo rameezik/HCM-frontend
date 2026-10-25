@@ -1,60 +1,223 @@
-# HCM Lite frontend
+# HCM Lite
 
-The application uses two separate repositories:
+### Human Capital Management System
+
+HCM Lite is a web-based Human Capital Management application designed to simplify employee management, departmental organization, attendance tracking, leave management, and workforce analytics.
+
+Built with Next.js, React, and Tailwind CSS, the application provides a modern, responsive interface for managing organizational operations.
+
+The project follows a full-stack architecture with a dedicated Express.js backend and MongoDB database.
+
+## Overview
+
+HCM Lite aims to provide organizations with a centralized platform for managing their workforce.
+
+The application is designed around three user roles:
+
+- **Admin:** Manages company settings, departments, employees, and organizational operations.
+- **HR:** Manages employee records, attendance, and leave requests.
+- **Employee:** Accesses personal information, attendance records, and leave requests.
+
+Role-based management, biometric attendance, and other advanced capabilities are being developed and integrated.
+
+## Tech Stack
+
+| Technology | Purpose |
+|---|---|
+| Next.js 16 | Frontend framework |
+| React 19 | User interface |
+| Tailwind CSS 4 | Styling |
+| React Hook Form | Form management |
+| Zod | Form validation |
+| Recharts | Analytics and charts |
+| Lucide React | Icons |
+| Motion | UI animations |
+| Node.js | JavaScript runtime |
+
+### Backend Technologies
+
+The frontend communicates with a separate backend application built using:
+
+- Node.js
+- Express.js
+- MongoDB Atlas
+- Mongoose
+- Authentication and role-based authorization
+
+## Features
+
+### Authentication and Workspace Setup
+
+- Company workspace registration
+- User login and authentication
+- Protected application routes
+- Role-based dashboard architecture
+- Account management workflows
+
+### Employee Management
+
+- Employee records
+- Employee profiles
+- Department assignments
+- Role management
+- Employment information
+
+### Department Management
+
+- Department organization
+- Employee assignments
+- Department-level workforce information
+
+### Attendance Management
+
+- Employee attendance records
+- Check-in and check-out workflows
+- Attendance history
+- Attendance status tracking
+- Attendance analytics
+
+### Face Recognition Attendance
+
+The project includes ongoing development of biometric attendance capabilities, including:
+
+- Camera-based face enrollment
+- Employee identity verification
+- Face-verified check-in and check-out
+- Attendance record integration
+
+Biometric verification requires compatible backend recognition services and model dependencies. Availability depends on the configured deployment environment.
+
+### Leave Management
+
+- Leave requests
+- Leave status tracking
+- HR approval workflows
+- Employee leave history
+
+### Analytics Dashboard
+
+- Workforce statistics
+- Attendance summaries
+- Attendance charts
+- Department-level analytics
+
+Analytics are designed to use data retrieved from the backend rather than hardcoded demonstration records.
+
+## Project Architecture
 
 ```text
-/workspace/HCM-frontend/          Next.js frontend (this repository)
-  app/                      App Router pages, JavaScript/JSX
-  components/               Role-based screens and reusable UI
-  lib/api.js                Same-origin Express API client
-/workspace/HCM-backend/      Express/Mongoose backend repository
-  server.js                 API entry point
-  src/                      Authentication, models, routes and business services
-  tests/                    Real MongoDB integration and business-rule tests
+HCM Lite
+│
+├── Frontend
+│   ├── Next.js App Router
+│   ├── React Components
+│   ├── Tailwind CSS
+│   ├── Authentication Pages
+│   ├── Role-Based Dashboards
+│   └── API Proxy
+│
+├── Backend
+│   ├── Node.js
+│   ├── Express.js
+│   ├── Authentication
+│   ├── Employee Management
+│   ├── Attendance Services
+│   └── REST APIs
+│
+└── Database
+    └── MongoDB Atlas
 ```
 
-Frontend → Express REST API → MongoDB. The frontend never accesses MongoDB directly. The existing charcoal surfaces, cyan/rose accents, typography and responsive navigation are preserved.
+## Getting Started
 
-## Start in this cloud environment
+### Prerequisites
 
-```sh
-MONGODB_URI='mongodb://127.0.0.1:27017/hcm_lite?replicaSet=hcm' bash /workspace/onboarding/start.sh
+Before running the project, ensure you have:
+
+- Node.js 24.5.0 or later
+- npm
+- Git
+- A running HCM Lite backend
+- MongoDB Atlas configured for the backend
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/rameezik/HCM-frontend.git
 ```
 
-This starts the local MongoDB replica set, the API from `/workspace/HCM-backend` on port4000, and Next.js from `/workspace/HCM-frontend` on port3000. Logs are in `/workspace/logs`. Installation/refresh is `bash /workspace/onboarding/install.sh`; it uses the application lockfiles and preserves local configuration. Both apps use Node24.19.0.
+Navigate into the project:
 
-Start from the login flow. A fresh database redirects to company/Admin setup. Admin creates organization records and HR; HR registers employees. Temporary passwords must be changed on first sign-in. No default accounts, fake responses or business records are seeded.
+```bash
+cd HCM-frontend
+```
 
-## Frontend commands
+### 2. Install Dependencies
 
-From this repository:
+```bash
+npm install
+```
 
-```sh
-npm ci
+### 3. Configure Environment Variables
+
+Create a `.env.local` file in the frontend project root.
+
+For local development:
+
+```env
+API_INTERNAL_URL=http://127.0.0.1:4000
+```
+
+The frontend uses a server-side API proxy to communicate with the Express backend.
+
+Browser requests use the same-origin `/api` endpoint, while the Next.js server forwards requests to the configured backend.
+
+The backend must be running and accessible at the specified address.
+
+### 4. Start the Development Server
+
+```bash
 npm run dev
-npm run lint
+```
+
+Open the application:
+
+```text
+http://localhost:3000
+```
+
+### 5. Build for Production
+
+```bash
 npm run build
+```
+
+Start the production server:
+
+```bash
 npm start
 ```
 
-The backend and MongoDB must also be running for real API behavior. `API_INTERNAL_URL` is a server-only Express origin, defaulting to `http://127.0.0.1:4000`; Next.js proxies same-origin `/api` calls using HttpOnly session cookies. Optional frontend configuration is in `.env.local`. Do not place MongoDB credentials or AI keys in the frontend. Compilation requires Google Fonts network access to `fonts.googleapis.com` and `fonts.gstatic.com`; TLS verification remains enabled.
+## Available Scripts
 
-## Backend
+| Command | Description |
+|---|---|
+| `npm run dev` | Start development server |
+| `npm run build` | Create production build |
+| `npm start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run automated tests |
 
-The actual backend code is in `/workspace/HCM-backend`, a separate Git repository. Its environment configuration belongs in its ignored `.env`. To run backend checks, use `cd /workspace/HCM-backend && npm test` with the local replica set running. Tests create and remove only isolated `hcm_test_*` databases.
+## Backend Integration
 
-## Requirements and verification
+HCM Lite uses a separate backend repository.
 
-See [requirements checklist](docs/requirements.md), [verification report](docs/verification.md), and the backend README. Attendance labels and business dates use the company IANA timezone (default UTC); stored timestamps remain UTC. Active frontend development and review use this `HCM-frontend` repository. The earlier `hcm-app` review commit is retained as-is; its history is not rewritten.
+**Backend Repository:**  
+https://github.com/rameezik/HCM-backend
 
-The hosted AI adapter and scoped tools are implemented, but live model behavior requires a secure backend `AI_API_KEY` binding and provider network access. Ordinary forms remain usable without AI. The optional local-camera attendance flow is implemented; other bonus features and robust liveness/PAD are not claimed. No public deployment or LMS submission is part of this change.
+### API Communication
 
-## Attendance extension
-
-See [attendance and optional-AI notes](docs/attendance-extension.md). AI-dependent controls are disabled when the backend reports a missing AI_API_KEY; all regular HR workflows remain enabled. Biometric enrollment and face attendance use the application backend’s local OpenCV YuNet/SFace ONNX inference. Install backend models with `bash scripts/setup-local-face.sh` and provision its local template-encryption key with `npm run setup:env`. No cloud biometric credentials are needed. The UI discloses that identity matching does not provide robust liveness or replay protection; ordinary attendance remains available.
-
-## API transport and account flows
-
-The browser and CSV/PDF download links use same-origin `/api`. A Next.js route handler forwards requests and HttpOnly session cookies to Express using the server runtime `API_INTERNAL_URL` (default `http://127.0.0.1:4000`); an origin or a URL ending in `/api` is accepted. For compatibility, `NEXT_PUBLIC_API_URL=http://localhost:4000/api` is also accepted when `API_INTERNAL_URL` is unset. This value selects the server proxy target, rather than enabling cross-site browser credentials. Set the backend `FRONTEND_URL` to the actual frontend origin. Restart the frontend after changing server configuration; no API destination is baked into rewrite rules.
-
-`/login` handles a JSON401 session check as the normal logged-out state. Genuine service/configuration failures remain visible with retry. `/register` creates a real company/Admin/session; `/forgot-password` and `/reset-password` use actual backend recovery APIs. Recovery email requires backend SMTP configuration; no provider key or SMTP credential belongs in frontend variables. The full audit is in `HCM-backend/docs/api-integration-audit.md`.
+```text
+Next.js Frontend
+       |
+       v
