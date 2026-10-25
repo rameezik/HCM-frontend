@@ -221,7 +221,29 @@ https://github.com/rameezik/HCM-backend
 Next.js Frontend
        |
        v
+Same-origin /api proxy
+       |
+       v
+Express backend (API_INTERNAL_URL)
+```
 
 ### Webcam face attendance
 
 Employee and HR navigation now includes **Webcam face scan** (`/employee/face-scan` and `/hr/face-scan`). Enroll once from **Enroll my face with webcam**, then use **Scan face to check in** or **Scan face to check out**. The Attendance page also provides **Open webcam face scan**. These controls use the existing protected local-recognition API; camera capture alone never marks attendance. Models, a stable backend encryption key and office-location settings must be ready before verification is enabled.
+
+### Shared public attendance kiosk
+
+`/attendance-kiosk` supports attendance on a trusted shared company device without an employee login on that device. An Admin must prepare it first:
+
+1. Configure office coordinates in Company Settings, then create the employee account and upload its profile photo in **Employees**.
+2. Open **Attendance kiosk** at `/admin/attendance-kiosks`, create a pairing link, and open that link on the shared device. The pairing link expires after 10 minutes and can be used once.
+3. Issue a one-time enrollment code for that employee. The code expires after 15 minutes. At the kiosk, the employee must read and explicitly accept biometric consent, enter the code and capture camera samples. Uploading a profile photo alone never enrolls an employee.
+4. After successful server-verified enrollment, use the paired kiosk to scan for check-in or check-out. Attendance is saved only after actual local identity matching and backend attendance checks.
+
+Use HTTPS in production. Only a paired, unexpired and unrevoked device can submit kiosk attendance; Admin can revoke it from the device list. Keep pairing links and enrollment codes private. Local identity matching does not provide robust liveness or replay protection; authorized non-biometric attendance remains available.
+
+### Password changes and normal workspace access
+
+Admin-issued email and password credentials normally open the account's role-specific dashboard directly. Password changes remain available from the workspace's **Password** action. An Admin can explicitly select **Require a password change at first sign-in** when creating or resetting access; only that enforced policy restricts the account to changing its password first. Legacy password-change recommendations do not block normal navigation.
+
+See the [backend model installation, encryption and biometric security guide](https://github.com/rameezik/HCM-backend/blob/main/docs/face-attendance.md) for runtime requirements and recognition limitations.

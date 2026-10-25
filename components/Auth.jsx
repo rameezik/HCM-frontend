@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { requiresPasswordChange } from "@/lib/authPolicy";
 import { Button, Form, Panel, Message } from "@/components/WorkspaceUI";
 
 function workspaceFor(user) {
@@ -10,7 +11,7 @@ function workspaceFor(user) {
     throw new Error(
       "The authentication service returned an invalid account. Please retry or contact your administrator.",
     );
-  return `/${user.role}/${user.mustChangePassword ? "password" : "dashboard"}`;
+  return `/${user.role}/${requiresPasswordChange(user) ? "password" : "dashboard"}`;
 }
 
 export default function Auth({ setup = false, register = false }) {

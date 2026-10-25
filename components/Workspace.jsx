@@ -10,12 +10,14 @@ import EmployeePhoto from "@/components/EmployeePhoto";
 import WebcamAttendance from "@/components/attendance/WebcamAttendance";
 import Departments from "@/components/Departments";
 import AttendanceGraph from "@/components/attendance/AttendanceGraph";
+import KioskManagement from "@/components/KioskManagement";
 import {
   CompanyOverview,
   EmployeeOverview,
   WorkspaceActions,
 } from "@/components/CompanyOverview";
 import { api } from "@/lib/api";
+import { requiresPasswordChange } from "@/lib/authPolicy";
 import {
   Panel,
   Form,
@@ -34,12 +36,13 @@ const nameColumn = {
 };
 const dateTime = (d) =>
   d ? new Date(d).toLocaleString("en-GB", { timeZone: "UTC" }) : "—";
-function useResource(path) {
+function useResource(path, requestKey) {
   const [state, setState] = useState({
     path: null,
     data: null,
     error: "",
     errorStatus: null,
+    requestKey: undefined,
   });
   const [epoch, setEpoch] = useState(0);
   const refresh = useCallback(() => setEpoch((v) => v + 1), []);
@@ -47,23 +50,27 @@ function useResource(path) {
     const controller = new AbortController();
     if (path)
       api(path, { signal: controller.signal })
-        .then((data) => setState({ path, data, error: "", errorStatus: null }))
+        .then((data) => {
+          if (!controller.signal.aborted) setState({ path, requestKey, data, error: "", errorStatus: null });
+        })
         .catch((e) => {
           if (!controller.signal.aborted)
             setState({
               path,
+              requestKey,
               data: null,
               error: e.message,
               errorStatus: e.status,
             });
         });
     return () => controller.abort();
-  }, [path, epoch]);
+  }, [path, epoch, requestKey]);
+  const current = state.path === path && state.requestKey === requestKey;
   return {
-    data: state.path === path ? state.data : null,
-    error: state.path === path ? state.error : "",
-    errorStatus: state.path === path ? state.errorStatus : null,
-    loading: state.path !== path,
+    data: current ? state.data : null,
+    error: current ? state.error : "",
+    errorStatus: current ? state.errorStatus : null,
+    loading: !current,
     refresh,
   };
 }
@@ -135,16 +142,21 @@ function Password({ onChanged, activation = false }) {
 }
 export default function Workspace({ role, view = "dashboard" }) {
   const router = useRouter(),
-    identity = useResource("/auth/me");
+    identity = useResource("/auth/me", view);
   const user = identity.data;
+  const passwordRequired = requiresPasswordChange(user);
   const [logoutError, setLogoutError] = useState("");
+  useEffect(() => {
+    window.addEventListener("focus", identity.refresh);
+    return () => window.removeEventListener("focus", identity.refresh);
+  }, [identity.refresh]);
   useEffect(() => {
     if (identity.errorStatus === 401) router.replace("/login");
     else if (user && user.role !== role)
       router.replace(`/${user.role}/dashboard`);
-    else if (user?.mustChangePassword && view !== "password")
+    else if (passwordRequired && view !== "password")
       router.replace(`/${user.role}/password`);
-  }, [identity.errorStatus, user, role, view, router]);
+  }, [identity.errorStatus, user, passwordRequired, role, view, router]);
   if (identity.error && identity.errorStatus !== 401)
     return (
       <main className="mx-auto w-full max-w-xl p-10">
@@ -159,7 +171,7 @@ export default function Workspace({ role, view = "dashboard" }) {
   if (
     !user ||
     user.role !== role ||
-    (user.mustChangePassword && view !== "password")
+    (passwordRequired && view !== "password")
   )
     return (
       <p role="status" className="p-10">
@@ -174,6 +186,7 @@ export default function Workspace({ role, view = "dashboard" }) {
     "face-enrollment": <BiometricEnrollment user={user} />,
     "face-scan": <WebcamAttendance user={user} />,
     "attendance-graphs": <AttendanceGraph user={user} />,
+    "attendance-kiosks": <KioskManagement />,
     leaves: <Leaves user={user} />,
     payroll: <Payroll user={user} />,
     payslips: <Payroll user={user} />,
@@ -189,10 +202,10 @@ export default function Workspace({ role, view = "dashboard" }) {
     assistant: <Assistant />,
     password: (
       <Password
-        activation={user.mustChangePassword}
+        activation={passwordRequired}
         onChanged={(updated) => {
           identity.refresh();
-          if (user.mustChangePassword)
+          if (passwordRequired)
             router.replace(`/${updated.role}/dashboard`);
         }}
       />
@@ -997,8 +1010,9 @@ function Employees({ user }) {
             type: "password",
             minLength: 12,
             autoComplete: "new-password",
-            label: "Temporary password",
+            label: "Initial password",
           },
+          ...(user.role === "admin" ? [{ name: "requirePasswordChange", type: "checkbox", defaultValue: false, optional: true, label: "Require a password change at first sign-in" }] : []),
         ]
       : []),
   ];
@@ -1081,8 +1095,8 @@ function Employees({ user }) {
             />
           )}
           <p className="mb-5 text-sm text-zinc-400">
-            Share temporary credentials securely with the account holder. Their
-            first login requires a new password before workspace access.
+            Share credentials securely with the account holder. Password changes
+            are optional unless explicitly required by the Admin below.
           </p>
           {(!deps.data?.length || !designations.data?.length) && (
             <p className="mb-5 rounded-xl border border-amber-300/20 p-4 text-sm text-amber-100">
@@ -1155,7 +1169,7 @@ function Employees({ user }) {
                     ? "No linked login"
                     : row.user.active === false
                       ? "Deactivated"
-                      : row.user?.mustChangePassword
+                      : row.user?.mustChangePassword && row.user?.passwordChangeEnforced
                         ? "Activation: password change required"
                         : "Active",
               },
@@ -1248,19 +1262,21 @@ function Employees({ user }) {
       {reset && (
         <Panel title={`Reset access · ${reset.name}`}>
           <p className="mb-5 text-sm text-zinc-400">
-            Set a new temporary password and deliver it through a secure
-            channel. Existing sessions are revoked and a password change is
-            required at next login.
+            Set a new password and deliver it through a secure channel. Existing
+            sessions are revoked. A password change at next sign-in is optional
+            unless you explicitly require it below.
           </p>
           <Form
+            key={reset._id}
             fields={[
               {
                 name: "password",
-                label: "New temporary password",
+                label: "New password",
                 type: "password",
                 minLength: 12,
                 autoComplete: "new-password",
               },
+              { name: "requirePasswordChange", type: "checkbox", defaultValue: false, optional: true, label: "Require a password change at first sign-in" },
             ]}
             submitLabel="Reset access"
             onCancel={() => setReset(null)}
@@ -1955,8 +1971,8 @@ function Users({ user }) {
           <Link href="/admin/employees" className="text-[#82cde6] underline">
             Employees
           </Link>{" "}
-          and select the HR role. Temporary credentials require a password
-          change at first login.
+          and select the HR role. Share credentials securely. Password changes
+          are optional unless you explicitly require one below.
         </p>
         <Form
           fields={[
@@ -1977,8 +1993,9 @@ function Users({ user }) {
               type: "password",
               minLength: 12,
               autoComplete: "new-password",
-              label: "Temporary password",
+              label: "Initial password",
             },
+            { name: "requirePasswordChange", type: "checkbox", defaultValue: false, optional: true, label: "Require a password change at first sign-in" },
             {
               name: "employee",
               label: "Link existing employee",
@@ -2022,11 +2039,11 @@ function Users({ user }) {
               },
               {
                 key: "mustChangePassword",
-                label: "Activation",
+                label: "Password policy",
                 render: (row) =>
                   row.mustChangePassword
                     ? "First password change required"
-                    : "Activated",
+                    : row.passwordChangeRecommended ? "Change recommended" : "Optional change",
               },
               {
                 key: "actions",
@@ -2082,19 +2099,20 @@ function Users({ user }) {
       {selected && (
         <Panel title={`Reset access · ${selected.name}`}>
           <p className="mb-5 text-sm text-zinc-400">
-            Set and securely deliver a new temporary password. Previous sessions
-            are revoked and the account holder must change it before using the
-            workspace.
+            Set and securely deliver a new password. Previous sessions are
+            revoked. Requiring a password change at next sign-in is optional.
           </p>
           <Form
+            key={selected._id}
             fields={[
               {
                 name: "password",
-                label: "New temporary password",
+                label: "New password",
                 type: "password",
                 minLength: 12,
                 autoComplete: "new-password",
               },
+              { name: "requirePasswordChange", type: "checkbox", defaultValue: false, optional: true, label: "Require a password change at first sign-in" },
             ]}
             submitLabel="Reset access"
             onCancel={() => setSelected(null)}
