@@ -221,3 +221,7 @@ https://github.com/rameezik/HCM-backend
 Next.js Frontend
        |
        v
+
+### Webcam face attendance
+
+Employee and HR navigation now includes **Webcam face scan** (`/employee/face-scan` and `/hr/face-scan`). Enroll once from **Enroll my face with webcam**, then use **Scan face to check in** or **Scan face to check out**. The Attendance page also provides **Open webcam face scan**. These controls use the existing protected local-recognition API; camera capture alone never marks attendance. Models, a stable backend encryption key and office-location settings must be ready before verification is enabled.

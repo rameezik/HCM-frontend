@@ -19,6 +19,7 @@ import {
   ReceiptText,
   ChevronRight,
   Sparkles,
+  Camera,
 } from "lucide-react";
 
 import { navigation } from "@/config/navigation";
@@ -37,6 +38,7 @@ const iconMap = {
   UserRound,
   Clock3,
   ReceiptText,
+  Camera,
 };
 
 export default function Sidebar({ role = "admin" }) {

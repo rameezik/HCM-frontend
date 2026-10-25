@@ -59,6 +59,11 @@ export const navigation = {
       icon: "CalendarCheck",
     },
     {
+      label: "Webcam face scan",
+      href: "/hr/face-scan",
+      icon: "Camera",
+    },
+    {
       label: "Leave Management",
       href: "/hr/leaves",
       icon: "CalendarDays",
@@ -85,6 +90,11 @@ export const navigation = {
       label: "Attendance",
       href: "/employee/attendance",
       icon: "Clock3",
+    },
+    {
+      label: "Webcam face scan",
+      href: "/employee/face-scan",
+      icon: "Camera",
     },
     {
       label: "My Leaves",

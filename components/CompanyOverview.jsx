@@ -14,6 +14,7 @@ export function WorkspaceActions({ user }) {
     user.role === "employee"
       ? [
           ["My profile", "profile"],
+          ["Webcam face scan", "face-scan"],
           ["Face enrollment", "face-enrollment"],
           ["Attendance history", "attendance"],
           ["My leave requests", "leaves"],
@@ -23,6 +24,7 @@ export function WorkspaceActions({ user }) {
           ["Departments", "departments"],
           ...(user.role === "admin" ? [["HR Management", "users"]] : []),
           ["Attendance", "attendance"],
+          ...(user.role === "hr" ? [["Webcam face scan", "face-scan"]] : []),
           ["Leave requests", "leaves"],
         ];
   return (

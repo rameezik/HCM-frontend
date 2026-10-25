@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import AttendanceAnalytics from "@/components/attendance/AttendanceAnalytics";
 import FaceVerification from "@/components/attendance/FaceVerification";
 import BiometricEnrollment from "@/components/attendance/BiometricEnrollment";
+import WebcamAttendance from "@/components/attendance/WebcamAttendance";
 import { CompanyOverview, EmployeeOverview, WorkspaceActions } from '@/components/CompanyOverview';
 import { api } from "@/lib/api";
 import {
@@ -156,6 +157,7 @@ export default function Workspace({ role, view = "dashboard" }) {
     profile: <Profile user={user} />,
     attendance: <Attendance user={user} />,
     "face-enrollment": <BiometricEnrollment user={user} />,
+    "face-scan": <WebcamAttendance user={user} />,
     leaves: <Leaves user={user} />,
     payroll: <Payroll user={user} />,
     payslips: <Payroll user={user} />,
@@ -1404,6 +1406,7 @@ function Attendance({ user }) {
     <div className="space-y-6">
       {user.role !== "admin" && (
         <Panel title="Verified face attendance">
+          <Link href={`/${user.role}/face-scan`} className="mb-5 inline-flex rounded-xl bg-[#007ba7] px-4 py-3 text-sm font-medium text-white hover:brightness-110">Open webcam face scan</Link>
           <FaceVerification user={user} onRecorded={resource.refresh} />
         </Panel>
       )}

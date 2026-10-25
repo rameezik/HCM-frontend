@@ -46,6 +46,11 @@ export default function FaceVerification({ user, onRecorded, onChange }) {
   const attendanceKnown =
     Boolean(lastRecord) || status?.attendance !== undefined;
   const checkedIn = Boolean(attendance?.checkIn && !attendance?.checkOut);
+  const scanReady = Boolean(
+    status?.configured &&
+      status?.enrollment?.enrolled &&
+      status.officeConfigured !== false,
+  );
   const role = user?.role === "hr" ? "hr" : "employee";
   async function begin(action) {
     setBusy(true);
@@ -126,7 +131,7 @@ export default function FaceVerification({ user, onRecorded, onChange }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-medium text-zinc-100">Face attendance</h3>
+        <h3 className="font-medium text-zinc-100">Webcam face attendance</h3>
         <Link
           href={`/${role}/face-enrollment`}
           className="text-sm text-[#82cde6] underline underline-offset-4"
@@ -197,10 +202,18 @@ export default function FaceVerification({ user, onRecorded, onChange }) {
           </p>
         </div>
       ) : !status.enrollment?.enrolled ? (
-        <p className="text-sm text-zinc-400">
-          Complete face enrollment with your consent before using this
-          attendance method.
-        </p>
+        <div className="space-y-3 text-sm text-zinc-400">
+          <p>
+            Complete face enrollment with your consent before using this
+            attendance method.
+          </p>
+          <Link
+            href={`/${role}/face-enrollment`}
+            className="inline-flex rounded-xl bg-[#007ba7] px-4 py-2 font-medium text-white"
+          >
+            Enroll my face with webcam
+          </Link>
+        </div>
       ) : status.officeConfigured === false ? (
         <div className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100">
           Office location setup is required for face attendance. Ask your
@@ -209,24 +222,34 @@ export default function FaceVerification({ user, onRecorded, onChange }) {
           is available meanwhile.
         </div>
       ) : (
-        <div className="flex flex-wrap gap-3">
-          <Button
-            disabled={busy || Boolean(capture) || checkedIn}
-            onClick={() => begin("check-in")}
-          >
-            Check in with face
-          </Button>
-          <Button
-            secondary
-            disabled={
-              busy || Boolean(capture) || (attendanceKnown && !checkedIn)
-            }
-            onClick={() => begin("check-out")}
-          >
-            Check out with face
-          </Button>
-        </div>
+        <p className="text-sm text-zinc-400">
+          Your enrollment is ready. Select check-in or check-out below to open
+          your webcam.
+        </p>
       )}
+      <div className="flex flex-wrap gap-3">
+        <Button
+          disabled={
+            loading || !scanReady || busy || Boolean(capture) || checkedIn
+          }
+          onClick={() => begin("check-in")}
+        >
+          Scan face to check in
+        </Button>
+        <Button
+          secondary
+          disabled={
+            loading ||
+            !scanReady ||
+            busy ||
+            Boolean(capture) ||
+            (attendanceKnown && !checkedIn)
+          }
+          onClick={() => begin("check-out")}
+        >
+          Scan face to check out
+        </Button>
+      </div>
       {phase && (
         <p role="status" className="text-sm leading-6 text-[#82cde6]">
           {phase}
