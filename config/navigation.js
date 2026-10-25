@@ -157,3 +157,18 @@ for (const role of ["employee", "hr"])
     href: `/${role}/face-enrollment`,
     icon: "UserRound",
   });
+
+// Keep graph discovery alongside attendance in every role's navigation.
+for (const role of ["admin", "hr", "employee"]) {
+  const href = `/${role}/attendance-graphs`;
+  if (!navigation[role].some((item) => item.href === href)) {
+    const attendanceIndex = navigation[role].findIndex(
+      (item) => item.href === `/${role}/attendance`,
+    );
+    navigation[role].splice(attendanceIndex + 1, 0, {
+      label: "Attendance graphs",
+      href,
+      icon: "BarChart3",
+    });
+  }
+}

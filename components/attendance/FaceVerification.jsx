@@ -28,14 +28,24 @@ const serverTime = (value) =>
       }).format(new Date(value))
     : "Not recorded";
 
-export default function FaceVerification({ user, onRecorded, onChange }) {
+export default function FaceVerification(props) {
+  const user = props.user;
+  return (
+    <FaceVerificationSession
+      key={`${user?.company}:${user?._id}:${user?.employee}:${user?.role}`}
+      {...props}
+    />
+  );
+}
+
+function FaceVerificationSession({ user, onRecorded, onChange }) {
   const linked = !user || Boolean(user.employee);
   const {
     status,
     loading,
     error: statusError,
     refresh,
-  } = useBiometricStatus(linked);
+  } = useBiometricStatus(linked, user);
   const [capture, setCapture] = useState(null),
     [busy, setBusy] = useState(false),
     [phase, setPhase] = useState(""),

@@ -212,3 +212,41 @@ test("client rejects malformed/non-JSON successes and distinguishes structured A
     null,
   );
 });
+
+test("private employee JPEGs pass only through authenticated photo paths, with no caching or SVG passthrough", async (t) => {
+  const bytes = Buffer.from([255, 216, 255, 224, 0, 2, 255, 217]);
+  const origin = await protocolServer(t, (req, res) => {
+    res.writeHead(200, {
+      "Content-Type": req.url.includes("svg=1")
+        ? "image/svg+xml"
+        : "image/jpeg",
+    });
+    res.end(bytes);
+  });
+  const parts = ["employees", "a".repeat(24), "photo"];
+  const image = await proxyApi(
+    new Request("http://frontend.example.test/api/" + parts.join("/"), {
+      headers: { Cookie: "hcm_session=transport-only" },
+    }),
+    parts,
+    { API_INTERNAL_URL: origin },
+  );
+  assert.equal(image.status, 200);
+  assert.deepEqual(Buffer.from(await image.arrayBuffer()), bytes);
+  assert.equal(image.headers.get("cache-control"), "no-store");
+  assert.equal(image.headers.get("x-content-type-options"), "nosniff");
+  const wrongPath = await proxyApi(
+    new Request("http://frontend.example.test/api/employees/image"),
+    ["employees", "image"],
+    { API_INTERNAL_URL: origin },
+  );
+  assert.equal(wrongPath.status, 502);
+  const svg = await proxyApi(
+    new Request(
+      "http://frontend.example.test/api/" + parts.join("/") + "?svg=1",
+    ),
+    parts,
+    { API_INTERNAL_URL: origin },
+  );
+  assert.equal(svg.status, 502);
+});

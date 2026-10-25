@@ -13,7 +13,7 @@ export default function DashboardLayout({ role, children }) {
     <div className="flex min-h-screen bg-[#0A0A0A] text-white">
       {/* Desktop Sidebar */}
       <div className="hidden w-64 shrink-0 md:block">
-        <div className="sticky top-0 h-screen overflow-y-auto">
+        <div className="sticky top-0 h-screen overflow-hidden">
           <Sidebar role={role} />
         </div>
       </div>

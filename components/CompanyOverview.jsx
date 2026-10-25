@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Panel, Table, Message } from "@/components/WorkspaceUI";
+import EmployeePhoto from "@/components/EmployeePhoto";
 
 const actionStyle =
   "rounded-xl border border-white/15 px-4 py-2 text-sm text-[#82cde6] hover:bg-white/5";
@@ -17,6 +18,7 @@ export function WorkspaceActions({ user }) {
           ["Webcam face scan", "face-scan"],
           ["Face enrollment", "face-enrollment"],
           ["Attendance history", "attendance"],
+          ["Attendance graphs", "attendance-graphs"],
           ["My leave requests", "leaves"],
         ]
       : [
@@ -24,6 +26,7 @@ export function WorkspaceActions({ user }) {
           ["Departments", "departments"],
           ...(user.role === "admin" ? [["HR Management", "users"]] : []),
           ["Attendance", "attendance"],
+          ["Attendance graphs", "attendance-graphs"],
           ...(user.role === "hr" ? [["Webcam face scan", "face-scan"]] : []),
           ["Leave requests", "leaves"],
         ];
@@ -103,6 +106,7 @@ export function CompanyOverview({ summary }) {
 
 export function EmployeeOverview({ user }) {
   const [state, setState] = useState({ id: null, employee: null, error: "" });
+  const [epoch, setEpoch] = useState(0);
   useEffect(() => {
     if (!user.employee) return undefined;
     const controller = new AbortController();
@@ -115,27 +119,34 @@ export function EmployeeOverview({ user }) {
           setState({ id: user.employee, employee: null, error: error.message });
       });
     return () => controller.abort();
-  }, [user.employee]);
+  }, [user.employee, epoch]);
   const employee = state.id === user.employee ? state.employee : null;
   return (
     <Panel title="Your employee profile">
       <Message error={state.error} />
       {employee ? (
-        <dl className="grid gap-4 sm:grid-cols-2">
-          {[
-            ["Full name", employee.name],
-            ["Employee ID", employee.code],
-            ["Department", employee.department?.name],
-            ["Designation", employee.designation?.name],
-            ["Joining date", employee.joinDate],
-            ["Employment status", employee.status],
-          ].map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-xs text-zinc-400">{label}</dt>
-              <dd className="mt-1 text-sm">{value || "—"}</dd>
-            </div>
-          ))}
-        </dl>
+        <>
+          <EmployeePhoto
+            employee={employee}
+            canEdit
+            onChanged={() => setEpoch((value) => value + 1)}
+          />
+          <dl className="grid gap-4 sm:grid-cols-2">
+            {[
+              ["Full name", employee.name],
+              ["Employee ID", employee.code],
+              ["Department", employee.department?.name],
+              ["Designation", employee.designation?.name],
+              ["Joining date", employee.joinDate],
+              ["Employment status", employee.status],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs text-zinc-400">{label}</dt>
+                <dd className="mt-1 text-sm">{value || "—"}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
       ) : !state.error ? (
         <p role="status" className="text-sm text-zinc-400">
           Loading your profile…

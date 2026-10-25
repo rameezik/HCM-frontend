@@ -10,7 +10,7 @@ function workspaceFor(user) {
     throw new Error(
       "The authentication service returned an invalid account. Please retry or contact your administrator.",
     );
-  return `/${user.role}/dashboard`;
+  return `/${user.role}/${user.mustChangePassword ? "password" : "dashboard"}`;
 }
 
 export default function Auth({ setup = false, register = false }) {

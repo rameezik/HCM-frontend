@@ -6,8 +6,15 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import AttendanceAnalytics from "@/components/attendance/AttendanceAnalytics";
 import FaceVerification from "@/components/attendance/FaceVerification";
 import BiometricEnrollment from "@/components/attendance/BiometricEnrollment";
+import EmployeePhoto from "@/components/EmployeePhoto";
 import WebcamAttendance from "@/components/attendance/WebcamAttendance";
-import { CompanyOverview, EmployeeOverview, WorkspaceActions } from '@/components/CompanyOverview';
+import Departments from "@/components/Departments";
+import AttendanceGraph from "@/components/attendance/AttendanceGraph";
+import {
+  CompanyOverview,
+  EmployeeOverview,
+  WorkspaceActions,
+} from "@/components/CompanyOverview";
 import { api } from "@/lib/api";
 import {
   Panel,
@@ -92,12 +99,14 @@ function useAction(refresh) {
   }
   return { act, error, success, busy };
 }
-function Password({ onChanged }) {
+function Password({ onChanged, activation = false }) {
   return (
     <Panel title="Change password">
       <p className="mb-5 text-sm text-zinc-400">
-        Temporary passwords must be changed before accessing your workspace. Use
-        at least 12 characters.
+        {activation
+          ? "Activate your account by replacing the temporary password. "
+          : "Choose a new password for your account. "}
+        Use at least 12 characters.
       </p>
       <Form
         fields={[
@@ -133,7 +142,9 @@ export default function Workspace({ role, view = "dashboard" }) {
     if (identity.errorStatus === 401) router.replace("/login");
     else if (user && user.role !== role)
       router.replace(`/${user.role}/dashboard`);
-  }, [identity.errorStatus, user, role, router]);
+    else if (user?.mustChangePassword && view !== "password")
+      router.replace(`/${user.role}/password`);
+  }, [identity.errorStatus, user, role, view, router]);
   if (identity.error && identity.errorStatus !== 401)
     return (
       <main className="mx-auto w-full max-w-xl p-10">
@@ -145,7 +156,11 @@ export default function Workspace({ role, view = "dashboard" }) {
         </Panel>
       </main>
     );
-  if (!user || user.role !== role)
+  if (
+    !user ||
+    user.role !== role ||
+    (user.mustChangePassword && view !== "password")
+  )
     return (
       <p role="status" className="p-10">
         Opening your workspace…
@@ -158,12 +173,13 @@ export default function Workspace({ role, view = "dashboard" }) {
     attendance: <Attendance user={user} />,
     "face-enrollment": <BiometricEnrollment user={user} />,
     "face-scan": <WebcamAttendance user={user} />,
+    "attendance-graphs": <AttendanceGraph user={user} />,
     leaves: <Leaves user={user} />,
     payroll: <Payroll user={user} />,
     payslips: <Payroll user={user} />,
     users: <Users user={user} />,
     settings: <Settings user={user} />,
-    departments: <Catalog kind="departments" user={user} />,
+    departments: <Departments user={user} />,
     designations: <Catalog kind="designations" user={user} />,
     "leave-types": <Catalog kind="leave-types" user={user} />,
     holidays: <Catalog kind="holidays" user={user} />,
@@ -171,7 +187,16 @@ export default function Workspace({ role, view = "dashboard" }) {
     announcements: <Announcements user={user} />,
     notifications: <Notifications />,
     assistant: <Assistant />,
-    password: <Password onChanged={identity.refresh} />,
+    password: (
+      <Password
+        activation={user.mustChangePassword}
+        onChanged={(updated) => {
+          identity.refresh();
+          if (user.mustChangePassword)
+            router.replace(`/${updated.role}/dashboard`);
+        }}
+      />
+    ),
   };
   return (
     <DashboardLayout role={role}>
@@ -188,9 +213,6 @@ export default function Workspace({ role, view = "dashboard" }) {
             <p className="mt-2 text-sm text-zinc-400">Welcome, {user.name}</p>
           </div>
           <div className="flex gap-2">
-            <Button secondary onClick={() => router.push(`/${role}/password`)}>
-              Password
-            </Button>
             <Button
               secondary
               onClick={async () => {
@@ -207,11 +229,7 @@ export default function Workspace({ role, view = "dashboard" }) {
           </div>
         </div>
         <Message error={logoutError} />
-        {user.mustChangePassword ? (
-          <Password onChanged={identity.refresh} />
-        ) : (
-          content[view] || <Message error="This page is unavailable." />
-        )}
+        {content[view] || <Message error="This page is unavailable." />}
       </div>
     </DashboardLayout>
   );
@@ -251,20 +269,32 @@ function Dashboard({ user }) {
   const refreshStats = stats.refresh;
   useEffect(() => {
     const refresh = () => refreshStats();
-    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 15000);
-    window.addEventListener('attendance-updated', refresh);
-    window.addEventListener('focus', refresh);
-    return () => { window.clearInterval(timer); window.removeEventListener('attendance-updated', refresh); window.removeEventListener('focus', refresh); };
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, 15000);
+    window.addEventListener("attendance-updated", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("attendance-updated", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, [refreshStats]);
   return (
     <div className="space-y-6">
       <WorkspaceActions user={user} />
-      {user.role === 'employee' ? (
+      {user.role === "employee" ? (
         <>
           <EmployeeOverview user={user} />
-          <Panel title="Face-verified attendance"><FaceVerification user={user} onRecorded={stats.refresh} /></Panel>
+          <Panel title="Face-verified attendance">
+            <FaceVerification user={user} onRecorded={stats.refresh} />
+          </Panel>
         </>
-      ) : <Resource resource={stats}><CompanyOverview summary={d?.companySummary} /></Resource>}
+      ) : (
+        <Resource resource={stats}>
+          <CompanyOverview summary={d?.companySummary} />
+        </Resource>
+      )}
       <AttendanceAnalytics user={user} />
       <Panel title="Reporting period">
         <DateFilters initial={filters} onChange={setFilters} />
@@ -1035,6 +1065,21 @@ function Employees({ user }) {
         <Panel
           title={edit ? "Edit employee account" : "Create employee account"}
         >
+          {edit && (
+            <EmployeePhoto
+              key={edit._id}
+              employee={edit}
+              canEdit
+              onChanged={(result) => {
+                setEdit((current) =>
+                  current?._id === edit._id
+                    ? { ...current, photoUpdatedAt: result.photoUpdatedAt }
+                    : current,
+                );
+                resource.refresh();
+              }}
+            />
+          )}
           <p className="mb-5 text-sm text-zinc-400">
             Share temporary credentials securely with the account holder. Their
             first login requires a new password before workspace access.
@@ -1078,7 +1123,15 @@ function Employees({ user }) {
           <Table
             rows={resource.data?.items}
             columns={[
-              { key: "name" },
+              {
+                key: "name",
+                render: (row) => (
+                  <div className="flex items-center gap-3">
+                    <EmployeePhoto employee={row} compact />
+                    <span>{row.name}</span>
+                  </div>
+                ),
+              },
               { key: "code", label: "Employee ID" },
               { key: "email" },
               { key: "department", render: (row) => row.department?.name },
@@ -1086,7 +1139,8 @@ function Employees({ user }) {
               {
                 key: "role",
                 label: "Role",
-                render: (row) => row.user?.role ? tag(row.user.role) : "No linked login",
+                render: (row) =>
+                  row.user?.role ? tag(row.user.role) : "No linked login",
               },
               {
                 key: "status",
@@ -1100,10 +1154,10 @@ function Employees({ user }) {
                   !row.user?._id
                     ? "No linked login"
                     : row.user.active === false
-                    ? "Deactivated"
-                    : row.user?.mustChangePassword
-                      ? "Activation: password change required"
-                      : "Active",
+                      ? "Deactivated"
+                      : row.user?.mustChangePassword
+                        ? "Activation: password change required"
+                        : "Active",
               },
               { key: "joinDate", label: "Joined" },
               {
@@ -1184,7 +1238,12 @@ function Employees({ user }) {
         </Resource>
       </Panel>
       {selected && (
-        <Employee360 id={selected} onClose={() => setSelected(null)} />
+        <Employee360
+          id={selected}
+          user={user}
+          onChanged={resource.refresh}
+          onClose={() => setSelected(null)}
+        />
       )}
       {reset && (
         <Panel title={`Reset access · ${reset.name}`}>
@@ -1213,11 +1272,13 @@ function Employees({ user }) {
           />
         </Panel>
       )}
-      {["admin", "hr"].includes(user.role) && <Csv onImported={resource.refresh} />}
+      {["admin", "hr"].includes(user.role) && (
+        <Csv onImported={resource.refresh} />
+      )}
     </div>
   );
 }
-function Employee360({ id, onClose }) {
+function Employee360({ id, onClose, user, onChanged }) {
   const resource = useResource(`/employees/${id}`);
   return (
     <Panel
@@ -1231,9 +1292,31 @@ function Employee360({ id, onClose }) {
       <Resource resource={resource}>
         {resource.data && (
           <>
+            <EmployeePhoto
+              employee={resource.data.employee}
+              canEdit={
+                user.role === "admin" ||
+                String(user.employee) === String(id) ||
+                (user.role === "hr" &&
+                  resource.data.employee.user?.role === "employee")
+              }
+              onChanged={() => {
+                resource.refresh();
+                onChanged?.();
+              }}
+            />
             <dl className="mb-6 grid gap-3 sm:grid-cols-2">
               {Object.entries(resource.data.employee)
-                .filter(([k]) => !["_id", "__v", "user"].includes(k))
+                .filter(
+                  ([k]) =>
+                    ![
+                      "_id",
+                      "__v",
+                      "user",
+                      "photoBuffer",
+                      "photoUpdatedAt",
+                    ].includes(k),
+                )
                 .map(([k, v]) => (
                   <div key={k}>
                     <dt className="text-xs uppercase text-zinc-500">{k}</dt>
@@ -1341,6 +1424,11 @@ function Profile({ user }) {
       <Resource resource={resource}>
         {resource.data && (
           <>
+            <EmployeePhoto
+              employee={resource.data.employee}
+              canEdit
+              onChanged={resource.refresh}
+            />
             <p className="mb-5 text-zinc-400">
               {resource.data.employee.name} · {resource.data.employee.code} ·{" "}
               {resource.data.employee.department?.name}
@@ -1406,7 +1494,12 @@ function Attendance({ user }) {
     <div className="space-y-6">
       {user.role !== "admin" && (
         <Panel title="Verified face attendance">
-          <Link href={`/${user.role}/face-scan`} className="mb-5 inline-flex rounded-xl bg-[#007ba7] px-4 py-3 text-sm font-medium text-white hover:brightness-110">Open webcam face scan</Link>
+          <Link
+            href={`/${user.role}/face-scan`}
+            className="mb-5 inline-flex rounded-xl bg-[#007ba7] px-4 py-3 text-sm font-medium text-white hover:brightness-110"
+          >
+            Open webcam face scan
+          </Link>
           <FaceVerification user={user} onRecorded={resource.refresh} />
         </Panel>
       )}
