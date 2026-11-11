@@ -1,5 +1,5 @@
-import Workspace from "@/components/Workspace";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <Workspace role="admin" view="attendance-kiosks" />;
+  redirect("/admin/attendance-terminal");
 }

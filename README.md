@@ -231,16 +231,18 @@ Express backend (API_INTERNAL_URL)
 
 Employee and HR navigation now includes **Webcam face scan** (`/employee/face-scan` and `/hr/face-scan`). Enroll once from **Enroll my face with webcam**, then use **Scan face to check in** or **Scan face to check out**. The Attendance page also provides **Open webcam face scan**. These controls use the existing protected local-recognition API; camera capture alone never marks attendance. Models, a stable backend encryption key and office-location settings must be ready before verification is enabled.
 
-### Shared public attendance kiosk
+### Attendance Terminal
 
-`/attendance-kiosk` supports attendance on a trusted shared company device without an employee login on that device. An Admin must prepare it first:
+The public camera page is `/attendance-terminal`. Employees do not need to sign in there. Admin setup is at `/admin/attendance-terminal`.
 
-1. Configure office coordinates in Company Settings, then create the employee account and upload its profile photo in **Employees**.
-2. Open **Attendance kiosk** at `/admin/attendance-kiosks`, create a pairing link, and open that link on the shared device. The pairing link expires after 10 minutes and can be used once.
-3. Issue a one-time enrollment code for that employee. The code expires after 15 minutes. At the kiosk, the employee must read and explicitly accept biometric consent, enter the code and capture camera samples. Uploading a profile photo alone never enrolls an employee.
-4. After successful server-verified enrollment, use the paired kiosk to scan for check-in or check-out. Attendance is saved only after actual local identity matching and backend attendance checks.
+1. Create the employee account and add a clear profile photo. Photos can be uploaded from Employees or Attendance Terminal settings.
+2. In Attendance Terminal settings, open **Manage photo**, record the employee's permission and select **Enable face attendance**. The backend generates an encrypted face template from the saved photo using local YuNet/SFace inference.
+3. Configure office coordinates in Company Settings. Create a terminal connection link and open it on the company attendance device. The link works across browsers for seven days and can be disconnected by Admin. Share it only with the company; it grants access to the attendance scanner.
+4. Open `/attendance-terminal` on that device, allow camera access and scan. A server-confirmed match shows **Present** and saves attendance. An unknown face shows **Record not found** without creating a record. Check-out is a separate action.
 
-Use HTTPS in production. Only a paired, unexpired and unrevoked device can submit kiosk attendance; Admin can revoke it from the device list. Keep pairing links and enrollment codes private. Local identity matching does not provide robust liveness or replay protection; authorized non-biometric attendance remains available.
+Changing a profile photo requires enabling face attendance again. Removing permission disables recognition. The previous `/attendance-kiosk` and `/admin/attendance-kiosks` URLs redirect to the new pages.
+
+Production camera access requires HTTPS. Local identity matching does not provide reliable liveness or replay protection; supervised terminals and authorized manual attendance remain available. If model files are missing, settings show a setup error instead of a simulated match. See the [backend setup guide](https://github.com/rameezik/HCM-backend/blob/main/docs/attendance-terminal.md) for installation, model files, configuration and limitations.
 
 ### Password changes and normal workspace access
 

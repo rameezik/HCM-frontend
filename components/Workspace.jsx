@@ -10,7 +10,7 @@ import EmployeePhoto from "@/components/EmployeePhoto";
 import WebcamAttendance from "@/components/attendance/WebcamAttendance";
 import Departments from "@/components/Departments";
 import AttendanceGraph from "@/components/attendance/AttendanceGraph";
-import KioskManagement from "@/components/KioskManagement";
+import AttendanceTerminalSettings from "@/components/attendance/AttendanceTerminalSettings";
 import {
   CompanyOverview,
   EmployeeOverview,
@@ -186,7 +186,7 @@ export default function Workspace({ role, view = "dashboard" }) {
     "face-enrollment": <BiometricEnrollment user={user} />,
     "face-scan": <WebcamAttendance user={user} />,
     "attendance-graphs": <AttendanceGraph user={user} />,
-    "attendance-kiosks": <KioskManagement />,
+    "attendance-terminal": <AttendanceTerminalSettings />,
     leaves: <Leaves user={user} />,
     payroll: <Payroll user={user} />,
     payslips: <Payroll user={user} />,

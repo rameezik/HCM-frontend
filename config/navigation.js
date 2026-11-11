@@ -26,8 +26,8 @@ export const navigation = {
       icon: "UserCog",
     },
     {
-      label: "Attendance kiosk",
-      href: "/admin/attendance-kiosks",
+      label: "Attendance Terminal",
+      href: "/admin/attendance-terminal",
       icon: "Camera",
     },
     {

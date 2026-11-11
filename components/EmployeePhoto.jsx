@@ -198,9 +198,8 @@ export default function EmployeePhoto({
             />
           </label>
           <p className="max-w-xl text-xs leading-5 text-zinc-400">
-            Choosing a photo uploads it securely to your company profile. JPEG,
-            PNG or WebP, up to 8 MB; resized to 512 pixels. A profile photo does
-            not enroll your face for attendance.
+            JPEG, PNG or WebP, up to 8 MB. After uploading, Admin can enable
+            face attendance from Attendance Terminal with your permission.
           </p>
           {updatedAt && (
             <Button secondary disabled={busy} onClick={removePhoto}>

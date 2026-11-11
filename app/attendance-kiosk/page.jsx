@@ -1,11 +1,5 @@
-import AttendanceKiosk from "@/components/kiosk/AttendanceKiosk";
-
-export const metadata = {
-  title: "Attendance kiosk",
-  robots: { index: false, follow: false },
-  referrer: "no-referrer",
-};
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <AttendanceKiosk />;
+  redirect("/attendance-terminal");
 }
