@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/lib/api";
+import { MIN_PASSWORD_LENGTH } from "@/lib/passwordPolicy";
 import { Panel, Form } from "@/components/WorkspaceUI";
 
 export default function PasswordForm({ onChanged, activation = false }) {
@@ -10,7 +11,7 @@ export default function PasswordForm({ onChanged, activation = false }) {
         {activation
           ? "Activate your account by replacing the temporary password. "
           : "Choose a new password for your account. "}
-        Use at least 12 characters.
+        Use at least {MIN_PASSWORD_LENGTH} characters.
       </p>
       <Form
         fields={[
@@ -24,7 +25,7 @@ export default function PasswordForm({ onChanged, activation = false }) {
             name: "password",
             label: "New password",
             type: "password",
-            minLength: 12,
+            minLength: MIN_PASSWORD_LENGTH,
             autoComplete: "new-password",
           },
         ]}

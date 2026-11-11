@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { MIN_PASSWORD_LENGTH } from "@/lib/passwordPolicy";
 import {
   Panel,
   Form,
@@ -52,7 +53,7 @@ export default function UserAccountsPage({ user }) {
             {
               name: "password",
               type: "password",
-              minLength: 12,
+              minLength: MIN_PASSWORD_LENGTH,
               autoComplete: "new-password",
               label: "Initial password",
             },
@@ -184,7 +185,7 @@ export default function UserAccountsPage({ user }) {
                 name: "password",
                 label: "New password",
                 type: "password",
-                minLength: 12,
+                minLength: MIN_PASSWORD_LENGTH,
                 autoComplete: "new-password",
               },
               {

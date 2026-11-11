@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
+import { MIN_PASSWORD_LENGTH } from "@/lib/passwordPolicy";
 import { Form, Message, Panel } from "@/components/WorkspaceUI";
 
 export default function ResetPassword() {
@@ -17,8 +18,8 @@ export default function ResetPassword() {
         </p>
         <Panel title="Choose a new password">
           <p className="mb-6 text-sm leading-6 text-zinc-400">
-            Use at least 12 characters. Completing this reset ends your previous
-            sessions and signs you in securely.
+            Use at least {MIN_PASSWORD_LENGTH} characters. Completing this reset
+            ends your previous sessions and signs you in securely.
           </p>
           <Message
             error={
@@ -34,14 +35,14 @@ export default function ResetPassword() {
                 name: "password",
                 label: "New password",
                 type: "password",
-                minLength: 12,
+                minLength: MIN_PASSWORD_LENGTH,
                 autoComplete: "new-password",
               },
               {
                 name: "confirmPassword",
                 label: "Confirm password",
                 type: "password",
-                minLength: 12,
+                minLength: MIN_PASSWORD_LENGTH,
                 autoComplete: "new-password",
               },
             ]}
@@ -55,9 +56,7 @@ export default function ResetPassword() {
                 body: { token, password },
               });
               if (!["admin", "hr", "employee"].includes(user?.role))
-                throw new Error(
-                  "The authentication service returned an invalid account. Sign in again or contact your Admin.",
-                );
+                throw new Error("Unable to sign in. Please try again.");
               router.replace(`/${user.role}/dashboard`);
             }}
           />

@@ -64,19 +64,11 @@ export default function AttendanceTerminal() {
               </Button>
             </div>
             {!configured && (
-              <Panel title="Terminal needs attention">
+              <Panel title="Attendance unavailable">
                 <p className="text-sm leading-6 text-amber-100">
-                  {status.unavailableReason ||
-                    "The attendance service is not ready. Ask your administrator to finish terminal setup."}
+                  Face attendance is unavailable. Please contact your
+                  administrator.
                 </p>
-                {status.missingConfiguration?.length > 0 && (
-                  <details className="mt-3 text-xs text-zinc-400">
-                    <summary className="cursor-pointer">Setup details</summary>
-                    <p className="mt-2">
-                      {status.missingConfiguration.join(", ")}
-                    </p>
-                  </details>
-                )}
                 <div className="mt-4">
                   <Button
                     secondary

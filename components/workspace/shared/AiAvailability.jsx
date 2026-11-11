@@ -13,8 +13,8 @@ export default function AiAvailability({ resource }) {
       className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-400"
       role="status"
     >
-      {resource.data?.message ||
-        "AI availability could not be checked. Regular forms and reports remain available."}
+      AI assistance is currently unavailable. Regular forms and reports remain
+      available.
     </p>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { MIN_PASSWORD_LENGTH } from "@/lib/passwordPolicy";
 import { Panel, Form, Table } from "@/components/WorkspaceUI";
 
 export default function EmployeeCsvImport({ onImported }) {
@@ -40,7 +41,7 @@ export default function EmployeeCsvImport({ onImported }) {
             name: "password",
             label: "Initial password for imported accounts",
             type: "password",
-            minLength: 12,
+            minLength: MIN_PASSWORD_LENGTH,
             optional: true,
           },
         ]}

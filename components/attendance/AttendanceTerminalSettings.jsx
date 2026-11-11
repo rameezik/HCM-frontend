@@ -159,23 +159,12 @@ export default function AttendanceTerminalSettings() {
       </Panel>
       <Message error={error} success={success} />
       {state && !state.configured && (
-        <Panel title="Face recognition needs setup">
+        <Panel title="Face attendance unavailable">
           <p className="text-sm text-zinc-300">
-            The server is missing the local face recognition files or encryption
-            settings. Employee records and manual attendance remain available.
+            Face attendance is unavailable. Please contact your system
+            administrator. Employee records and manual attendance remain
+            available.
           </p>
-          <p className="mt-3 text-sm text-amber-100">
-            Missing:{" "}
-            {state.missingConfiguration?.join(", ") || "Server configuration"}
-          </p>
-          <details className="mt-4 text-sm text-zinc-400">
-            <summary className="cursor-pointer">Server setup</summary>
-            <p className="mt-2">
-              In HCM-backend, run <code>npm run setup:face</code> and{" "}
-              <code>npm run setup:env</code>, then restart the backend. Keep the
-              existing encryption key.
-            </p>
-          </details>
         </Panel>
       )}
       <TerminalEmployeeList

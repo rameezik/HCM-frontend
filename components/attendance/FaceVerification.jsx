@@ -86,9 +86,7 @@ function FaceVerificationSession({ user, onRecorded, onChange }) {
   async function complete(samples) {
     if (!capture) return;
     setBusy(true);
-    setPhase(
-      "The backend is comparing your face locally and checking location and attendance rules…",
-    );
+    setPhase("Verifying your face and attendance…");
     try {
       const record = await api("/biometrics/attendance", {
         method: "POST",
@@ -197,18 +195,14 @@ function FaceVerificationSession({ user, onRecorded, onChange }) {
       )}
       {loading ? (
         <p role="status" className="text-sm text-zinc-400">
-          Checking enrollment and local model status…
+          Checking face attendance…
         </p>
       ) : !status?.configured ? (
         <div className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100">
-          <p className="font-medium">Face verification is not available yet</p>
+          <p className="font-medium">Face attendance is unavailable</p>
           <p className="mt-1">
-            {status?.unavailableReason ||
-              "The local model or encryption configuration is unavailable. Use web check-in/check-out or request an HR correction."}
-          </p>
-          <p className="mt-2 text-xs text-amber-100/70">
-            Local model files and the encryption key must be configured on the
-            application server. No external API key is required.
+            Please contact your administrator. You can still use manual
+            attendance or request an HR correction.
           </p>
         </div>
       ) : !status.enrollment?.enrolled ? (

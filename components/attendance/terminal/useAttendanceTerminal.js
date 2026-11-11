@@ -46,7 +46,7 @@ export default function useAttendanceTerminal() {
         const next = await getTerminalStatus(signal);
         if (typeof next?.paired !== "boolean")
           throw new Error(
-            "Terminal settings could not be loaded. Ask your administrator to check the connection.",
+            "Unable to load terminal settings. Please try again.",
           );
         if (isMounted.current && !signal?.aborted) {
           setStatus(next);
@@ -204,7 +204,7 @@ export default function useAttendanceTerminal() {
           !response.employee?.name
         )
           throw new Error(
-            "The attendance confirmation is incomplete. Ask HR to check the attendance record before retrying.",
+            "Unable to confirm attendance. Check your attendance history before trying again.",
           );
         setResult({
           type: "success",

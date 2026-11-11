@@ -21,24 +21,6 @@ const formattedTime = (value) =>
       }).format(new Date(value))
     : "Not yet";
 
-function setupItems(status) {
-  const missing = status?.missingConfiguration || [];
-  const items = [];
-  if (missing.some((name) => /\.onnx$|PYTHON/.test(name)))
-    items.push(
-      "Install the local face models and Python runtime on the backend.",
-    );
-  if (missing.includes("BIOMETRIC_TEMPLATE_KEY"))
-    items.push(
-      "Configure the backend biometric encryption key; keep the same key for existing enrollments.",
-    );
-  if (missing.some((name) => /THRESHOLD|RETENTION/.test(name)))
-    items.push(
-      "Correct the face matching or retention settings on the backend.",
-    );
-  return items;
-}
-
 export default function BiometricEnrollment({ user }) {
   return <EnrollmentContent key={biometricIdentity(user)} user={user} />;
 }
@@ -83,7 +65,6 @@ function EnrollmentContent({ user }) {
   const ready = Boolean(
     linked && status?.configured && status?.consent?.version && !removable,
   );
-  const missing = setupItems(status);
   const blockedReason = !linked
     ? "Your login needs a linked employee profile. Ask your administrator to link your account."
     : loading
@@ -91,14 +72,13 @@ function EnrollmentContent({ user }) {
       : statusError
         ? "Enrollment status could not be loaded. Retry the connection below; no enrollment has been recorded."
         : legacy
-          ? "Your previous provider enrollment needs administrator cleanup before local re-enrollment."
+          ? "Your previous enrollment needs attention. Please contact your administrator."
           : enrollment?.enrolled
             ? "Your face enrollment is active. Open Attendance to check in or out."
             : removable
               ? "Delete the existing enrollment below before starting a new enrollment."
               : !status?.configured
-                ? status?.unavailableReason ||
-                  "Your company’s local recognition service is not ready. Ask your administrator to complete backend setup."
+                ? "Face enrollment is unavailable. Please contact your administrator."
                 : !consent
                   ? "Read the notice and select the consent checkbox to enable your webcam."
                   : "Ready to open your webcam. Keep exactly one face clearly visible.";
@@ -285,21 +265,10 @@ function EnrollmentContent({ user }) {
             Expires {formattedTime(enrollment.expiresAt)}.
           </p>
         )}
-        {!status?.configured && !loading && missing.length > 0 && (
-          <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100">
-            <p className="font-medium">Administrator setup needed</p>
-            <ul className="mt-2 list-disc space-y-1 pl-5">
-              {missing.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-        )}
         {legacy && (
           <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100">
-            This enrollment belongs to the former biometric provider.
-            Recognition is disabled; your administrator must confirm provider
-            cleanup before you enroll locally.
+            Your previous enrollment needs attention. Please contact your
+            administrator before enrolling again.
           </p>
         )}
         {capture && (
@@ -328,7 +297,7 @@ function EnrollmentContent({ user }) {
         <div className="mt-4 space-y-3 text-sm leading-7 text-zinc-400">
           <p>
             {status?.consent?.notice ||
-              "Your company’s biometric processing notice will appear here when the service is available. Enrollment stays disabled until the backend supplies the notice."}
+              "The consent notice is unavailable. Please try again later."}
           </p>
           {status?.consent?.version && (
             <p>Consent notice version: {status.consent.version}</p>

@@ -94,7 +94,8 @@ test("normal JSON session401 retains authentication semantics", async (t) => {
   );
   await assert.rejects(
     readApiResponse(response),
-    (error) => error.status === 401 && error.message === "Sign in to continue.",
+    (error) =>
+      error.status === 401 && error.message === "401 · Sign in to continue.",
   );
 });
 
@@ -135,7 +136,16 @@ test("real connection refusal and non-JSON upstream failures return explicit JSO
     { API_INTERNAL_URL: `http://127.0.0.1:${closedPort}` },
   );
   assert.equal(unavailable.status, 502);
-  assert.equal((await unavailable.json()).code, "API_BACKEND_UNAVAILABLE");
+  const unavailableError = await unavailable.json();
+  assert.equal(unavailableError.code, "API_BACKEND_UNAVAILABLE");
+  assert.equal(
+    unavailableError.message,
+    "Connection unavailable. Please try again.",
+  );
+  assert.doesNotMatch(
+    unavailableError.message,
+    /API_INTERNAL_URL|backend|Express/,
+  );
   const origin = await protocolServer(t, (req, res) => {
     res.writeHead(200, { "Content-Type": "text/html" });
     res.end("<html>Wrong deployment target</html>");
@@ -156,7 +166,15 @@ test("real connection refusal and non-JSON upstream failures return explicit JSO
     { API_INTERNAL_URL: "https://user:secret@example.test" },
   );
   assert.equal(badConfig.status, 503);
-  assert.equal((await badConfig.text()).includes("secret"), false);
+  const configurationError = await badConfig.json();
+  assert.equal(
+    configurationError.message,
+    "Service unavailable. Please try again later.",
+  );
+  assert.doesNotMatch(
+    JSON.stringify(configurationError),
+    /secret|API_INTERNAL_URL/,
+  );
 });
 
 test("proxy rejects traversal and oversized requests before backend access", async () => {

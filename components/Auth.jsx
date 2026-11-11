@@ -3,14 +3,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { MIN_PASSWORD_LENGTH } from "@/lib/passwordPolicy";
 import { requiresPasswordChange } from "@/lib/authPolicy";
 import { Button, Form, Panel, Message } from "@/components/WorkspaceUI";
 
 function workspaceFor(user) {
   if (!["admin", "hr", "employee"].includes(user?.role))
-    throw new Error(
-      "The authentication service returned an invalid account. Please retry or contact your administrator.",
-    );
+    throw new Error("Unable to sign in. Please try again.");
   return `/${user.role}/${requiresPasswordChange(user) ? "password" : "dashboard"}`;
 }
 
@@ -124,7 +123,7 @@ export default function Auth({ setup = false, register = false }) {
                   name: "password",
                   label: "Password",
                   type: "password",
-                  minLength: setup || register ? 12 : 1,
+                  minLength: setup || register ? MIN_PASSWORD_LENGTH : 1,
                   autoComplete:
                     setup || register ? "new-password" : "current-password",
                 },
