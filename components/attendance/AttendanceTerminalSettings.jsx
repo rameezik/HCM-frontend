@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { Button, Message, Panel } from "@/components/WorkspaceUI";
 import EmployeePhotoEditor from "./terminal/settings/EmployeePhotoEditor";
 import TerminalEmployeeList from "./terminal/settings/TerminalEmployeeList";
+import TerminalReadiness from "./terminal/settings/TerminalReadiness";
 import {
   TerminalLinkPanel,
   ConnectedTerminalList,
@@ -159,13 +160,11 @@ export default function AttendanceTerminalSettings() {
       </Panel>
       <Message error={error} success={success} />
       {state && !state.configured && (
-        <Panel title="Face attendance unavailable">
-          <p className="text-sm text-zinc-300">
-            Face attendance is unavailable. Please contact your system
-            administrator. Employee records and manual attendance remain
-            available.
-          </p>
-        </Panel>
+        <TerminalReadiness
+          missingConfiguration={state.missingConfiguration}
+          loading={loading}
+          onRecheck={reload}
+        />
       )}
       <TerminalEmployeeList
         settings={state}
