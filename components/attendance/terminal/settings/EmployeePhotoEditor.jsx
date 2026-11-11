@@ -72,17 +72,6 @@ export default function EmployeePhotoEditor({
       </details>
       <Message error={error} />
       <div className="flex flex-wrap gap-3">
-
-        <p>
-  {JSON.stringify({
-    busy,
-    configured,
-    consent,
-    photo: !!employee.photoUpdatedAt,
-    inactive: employee.faceAttendance?.state === "account_inactive"
-  })}
-</p>
-
         <Button
           disabled={
             busy ||
