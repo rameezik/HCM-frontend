@@ -4,6 +4,7 @@ import { useState } from "react";
 import EmployeePhoto from "@/components/EmployeePhoto";
 import { api } from "@/lib/api";
 import { Button, Message } from "@/components/WorkspaceUI";
+import { getEnrollmentError } from "./enrollmentErrors";
 
 const API = "/attendance-terminal-management";
 
@@ -28,7 +29,9 @@ export default function EmployeePhotoEditor({
       });
       onSaved(`Face attendance enabled for ${employee.name}.`);
     } catch (failure) {
-      setError(failure.message);
+      const diagnostic = getEnrollmentError(failure);
+      setError(diagnostic.message);
+      if (diagnostic.refreshReadiness) onRefresh?.();
     } finally {
       setBusy(false);
     }
@@ -42,7 +45,9 @@ export default function EmployeePhotoEditor({
       });
       onSaved(`Face attendance disabled for ${employee.name}.`);
     } catch (failure) {
-      setError(failure.message);
+      const diagnostic = getEnrollmentError(failure);
+      setError(diagnostic.message);
+      if (diagnostic.refreshReadiness) onRefresh?.();
     } finally {
       setBusy(false);
     }
