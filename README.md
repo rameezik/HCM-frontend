@@ -1,5 +1,7 @@
 # HCM Lite
 
+[Code guide](docs/code-guide.md): where pages, API calls and shared components live.
+
 ### Human Capital Management System
 
 HCM Lite is a web-based Human Capital Management application designed to simplify employee management, departmental organization, attendance tracking, leave management, and workforce analytics.
